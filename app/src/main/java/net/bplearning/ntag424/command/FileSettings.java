@@ -61,9 +61,9 @@ public class FileSettings {
 			settings.sdmSettings.sdmOptionEncryptFileData = BitUtil.getBitLSB(sdmOptions, 4);
 			settings.sdmSettings.sdmOptionUseAscii = BitUtil.getBitLSB(sdmOptions, 0);
 
-			byte sdmAccessRights1 = data[currOffset];
-			currOffset++;
 			byte sdmAccessRights2 = data[currOffset];
+			currOffset++;
+			byte sdmAccessRights1 = data[currOffset];
 			currOffset++;
 			settings.sdmSettings.sdmMetaReadPerm = ByteUtil.leftNibble(sdmAccessRights1);
 			settings.sdmSettings.sdmFileReadPerm = ByteUtil.rightNibble(sdmAccessRights1);
