@@ -20,16 +20,20 @@ import net.bplearning.ntag424.util.Crypto;
 public class PiccData {
 	byte[] uid;
 	int readCounter;
+	boolean hasReadCounter = true; // NUOVO
 	boolean usesLrp;
 	byte[] macFileKey;
 
 	public PiccData(byte[] uid, int readCounter, boolean usesLrp) {
 		this.uid = uid;
 		this.readCounter = readCounter;
+		// hasReadCounter resta true (default): chi usa questo costruttore fornisce un counter reale
 		this.usesLrp = usesLrp;
 	}
 
-	protected PiccData() { }
+	protected PiccData() {
+		hasReadCounter = false; // NUOVO
+	}
 
 	public static PiccData decodeFromBytes(byte[] piccRecord, boolean usesLrp) {
 		PiccData pdata = new PiccData();
@@ -48,6 +52,7 @@ public class PiccData {
 			// No tag counter
 		} else {
 			pdata.readCounter = ByteUtil.lsbBytesToInt(ByteUtil.subArrayOf(piccRecord, curIdx, 3));
+			pdata.hasReadCounter = true; // NUOVO
 		}
 
 		pdata.usesLrp = usesLrp;
@@ -150,7 +155,7 @@ public class PiccData {
 			}
 		}
 
-		if(readCounter > 0) {
+		if(hasReadCounter) { // era: if(readCounter > 0)
 			byte[] readCounterBytes = new byte[] {
 				ByteUtil.getByteLSB(readCounter, 0),
 				ByteUtil.getByteLSB(readCounter, 1),

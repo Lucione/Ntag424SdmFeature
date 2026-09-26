@@ -189,6 +189,13 @@ return newData;
     public static byte[] diversifyKey(byte[] masterKey, byte[] diversificationData) {
 		// NOTE - we are not including the padblock because the CMAC function already does it
 
+        if (diversificationData == null || diversificationData.length < 1 || diversificationData.length > 31) {
+            throw new IllegalArgumentException(
+                    "diversificationData must be between 1 and 31 bytes long (AN10922), got " +
+                            (diversificationData == null ? "null" : diversificationData.length + " bytes")
+            );
+        }
+
         switch(masterKey.length) {
             case 16:
                 return Crypto.simpleAesCmac(masterKey, ByteUtil.combineByteArrays(DIVERSITY_CONSTANT_128, diversificationData));
