@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS tags (
     uid_hex       CHAR(14)     NOT NULL,              -- UID del tag, 7 byte in hex minuscolo
     label         VARCHAR(255) DEFAULT NULL,          -- riferimento interno (lotto, prodotto, ecc.)
-    status        ENUM('active', 'revoked') NOT NULL DEFAULT 'active',
+    status        ENUM('active', 'pending', 'revoked') NOT NULL DEFAULT 'pending', -- 'pending' = censito ma in attesa di abilitazione backend
     last_counter  INT          NOT NULL DEFAULT -1,   -- ultimo SDMReadCtr accettato
     first_seen_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_seen_at  DATETIME     DEFAULT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS scan_log (
     uid_hex     CHAR(14)     NOT NULL,
     counter     INT          DEFAULT NULL,
     mac_valid   TINYINT(1)   NOT NULL,                -- 0/1
-    outcome     ENUM('valid', 'mac_invalid', 'replay', 'unknown_format', 'revoked') NOT NULL,
+    outcome     ENUM('valid', 'mac_invalid', 'replay', 'unknown_format', 'revoked', 'not_activated') NOT NULL,
     ip          VARCHAR(45)  DEFAULT NULL,             -- IPv4 o IPv6
     user_agent  VARCHAR(512) DEFAULT NULL,
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,

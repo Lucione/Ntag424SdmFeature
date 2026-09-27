@@ -19,24 +19,32 @@ final class TagRepository
         return $row === false ? null : $row;
     }
 
-    /** Registra un tag mai visto prima come 'active' con contatore -1. */
-    public function register(string $uidHex, ?string $label = null): void
+    /**
+     * Registra un tag mai visto prima.
+     * Per default lo stato è 'pending' (non attivo), in modo che debba essere abilitato
+     * esplicitamente dal backend per consentire l'accesso completo alla verifica.
+     */
+    public function register(string $uidHex, ?string $label = null, string $status = 'pending'): void
     {
         $stmt = $this->pdo->prepare(
-            "INSERT IGNORE INTO tags (uid_hex, label, status, last_counter) VALUES (:uid, :label, 'active', -1)"
+            "INSERT IGNORE INTO tags (uid_hex, label, status, last_counter) VALUES (:uid, :label, :status, -1)"
         );
-        $stmt->execute(['uid' => strtolower(trim($uidHex)), 'label' => $label]);
+        $stmt->execute([
+            'uid'    => strtolower(trim($uidHex)),
+            'label'  => $label,
+            'status' => $status
+        ]);
     }
 
     /**
      * Aggiunge o aggiorna (UPSERT) i dati di un tag nel database MySQL.
-     * Permette la gestione del ciclo di vita: aggiornamento etichetta, cambio stato ('active' / 'revoked')
+     * Permette la gestione del ciclo di vita: aggiornamento etichetta, cambio stato ('active' / 'pending' / 'revoked')
      * e risincronizzazione dell'ultimo contatore di lettura.
      */
     public function upsertTag(
         string $uidHex,
         ?string $label = null,
-        string $status = 'active',
+        string $status = 'pending',
         int $lastCounter = -1
     ): void {
         $uidHex = strtolower(trim($uidHex));
@@ -103,6 +111,12 @@ final class TagRepository
     {
         $row = $this->find($uidHex);
         return $row !== null && $row['status'] === 'revoked';
+    }
+
+    public function isActive(string $uidHex): bool
+    {
+        $row = $this->find($uidHex);
+        return $row !== null && $row['status'] === 'active';
     }
 
     /** Registra la scansione nella tabella `scan_log` e restituisce l'ID del log generato (`scan_id`). */

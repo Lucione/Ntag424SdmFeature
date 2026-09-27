@@ -11,12 +11,12 @@ DELIMITER //
 -- ----------------------------------------------------------------------------
 -- PROCEDURE ALMACENATA: sp_upsert_tag
 -- Descrizione: Inserisce un nuovo tag NTAG 424 DNA se non esiste, oppure ne
---              aggiorna l'etichetta (label), lo stato (active/revoked) e/o
+--              aggiorna l'etichetta (label), lo stato (active/pending/revoked) e/o
 --              il contatore di lettura (last_counter).
 -- Parametri:
 --   p_uid_hex      : UID del chip NTAG 424 DNA (7 byte / 14 caratteri HEX)
 --   p_label        : Etichetta/Lotto/Descrizione prodotto associato
---   p_status       : Stato del tag ('active' oppure 'revoked')
+--   p_status       : Stato del tag ('active', 'pending', 'revoked')
 --   p_last_counter : Ultimo SDMReadCtr registrato/accettato (-1 per default nuovo tag)
 -- ----------------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS `sp_upsert_tag` //
@@ -24,16 +24,16 @@ DROP PROCEDURE IF EXISTS `sp_upsert_tag` //
 CREATE PROCEDURE `sp_upsert_tag`(
     IN p_uid_hex       CHAR(14),
     IN p_label         VARCHAR(255),
-    IN p_status        ENUM('active', 'revoked'),
+    IN p_status        ENUM('active', 'pending', 'revoked'),
     IN p_last_counter  INT
 )
 BEGIN
     -- Normalizza l'UID in minuscolo per consistenza di ricerca
     SET p_uid_hex = LOWER(TRIM(p_uid_hex));
 
-    -- Se p_status è NULL, imposta il default 'active'
+    -- Se p_status è NULL, imposta il default 'pending' (richiede abilitazione backend)
     IF p_status IS NULL THEN
-        SET p_status = 'active';
+        SET p_status = 'pending';
     END IF;
 
     -- Se p_last_counter è NULL, imposta il default -1
@@ -81,39 +81,18 @@ DELIMITER ;
 -- ESEMPI PRATICI DI UTILIZZO E ISTRUZIONI SQL DIRETTE
 -- ============================================================================
 
--- 1. ESEMPIO CHIAMATA PROCEDURA: Registrazione nuovo tag di fabbrica/lotto
--- CALL sp_upsert_tag('049f50824f1390', 'Lotto Vino 2024 - Bottiglia #001', 'active', -1);
+-- 1. ESEMPIO CHIAMATA PROCEDURA: Registrazione nuovo tag (in stato 'pending' in attesa di abilitazione)
+-- CALL sp_upsert_tag('049f50824f1390', 'Lotto Vino 2024 - Bottiglia #001', 'pending', -1);
 
--- 2. ESEMPIO CHIAMATA PROCEDURA: Revoca di un tag rubato o compromesso
+-- 2. ESEMPIO CHIAMATA PROCEDURA: Abilitazione / Attivazione tag dal Backend
+-- CALL sp_upsert_tag('049f50824f1390', 'Lotto Vino 2024 - Bottiglia #001 (Attivato)', 'active', -1);
+
+-- 3. ESEMPIO CHIAMATA PROCEDURA: Revoca di un tag rubato o compromesso
 -- CALL sp_upsert_tag('049f50824f1390', NULL, 'revoked', -1);
 
--- 3. ESEMPIO CHIAMATA PROCEDURA: Re-attivazione e reset contatore
--- CALL sp_upsert_tag('049f50824f1390', 'Lotto Vino 2024 - Bottiglia #001 (Re-attivata)', 'active', 0);
-
 -- ----------------------------------------------------------------------------
--- 4. ISTRUZIONE SQL UPSERT DIRETTA (senza stored procedure)
--- Utile per integrazione in script PHP, batch o ORM
+-- 4. ISTRUZIONE SQL UPSERT DIRETTA PER ATTIVAZIONE DA BACKEND
 -- ----------------------------------------------------------------------------
 /*
-INSERT INTO `tags` (`uid_hex`, `label`, `status`, `last_counter`, `first_seen_at`)
-VALUES ('049f50824f1390', 'Prodotto Esempio #102', 'active', -1, NOW())
-ON DUPLICATE KEY UPDATE
-    `label`        = VALUES(`label`),
-    `status`       = VALUES(`status`),
-    `last_counter` = GREATEST(`last_counter`, VALUES(`last_counter`)),
-    `last_seen_at` = NOW();
-*/
-
--- ----------------------------------------------------------------------------
--- 5. BATCH UPSERT MULTIPLI TAG (Provisioning massivo di un lotto di produzione)
--- ----------------------------------------------------------------------------
-/*
-INSERT INTO `tags` (`uid_hex`, `label`, `status`, `last_counter`, `first_seen_at`)
-VALUES
-    ('049f50824f1390', 'Lotto A - Articolo #001', 'active', -1, NOW()),
-    ('04de5f1eacc040', 'Lotto A - Articolo #002', 'active', -1, NOW()),
-    ('045758994b5a73', 'Lotto A - Articolo #003', 'active', -1, NOW())
-ON DUPLICATE KEY UPDATE
-    `label`  = VALUES(`label`),
-    `status` = VALUES(`status`);
+UPDATE `tags` SET `status` = 'active', `label` = 'Prodotto Verificato e Attivato' WHERE `uid_hex` = '049f50824f1390';
 */

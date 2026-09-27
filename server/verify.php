@@ -9,9 +9,12 @@ error_reporting(E_ALL);
  *
  * Implementa il pattern PRG (Post/Redirect/Get):
  * 1. Decifra e verifica la firma del tag.
- * 2. Registra l'esito nel database (`scan_log`).
- * 3. Reindirizza il browser dell'utente a `result.php?scan_id=...&outcome=...`
- *    evitando che refreshes/ricaricamenti del browser rieseguano il ciclo di verifica.
+ * 2. Se il tag non esiste a DB, viene registrato con stato 'pending' (NON attivo).
+ * 3. Se il tag è 'pending', viene salvata la scansione ('not_activated') e viene mostrata
+ *    la pagina informativa. Solo l'abilitazione nel backend permetterà l'esito 'valid'.
+ * 4. Registra l'esito nel database (`scan_log`).
+ * 5. Reindirizza il browser dell'utente a `result.php?scan_id=...&outcome=...`
+ *    evitando che ricaricamenti del browser rieseguano il ciclo di verifica.
  */
 
 require __DIR__ . '/src/Cmac.php';
@@ -102,24 +105,32 @@ $uid = $result->uidHex;
 
 // 1. Verificazione della firma CMAC
 if (!$result->macValid) {
-    $repo->register($uid);
+    $repo->register($uid, null, 'pending');
     $scanId = $repo->logScan($uid, $result->readCounter, false, 'mac_invalid');
     respond(200, 'mac_invalid', ['uid' => $uid], $scanId);
 }
 
-// 2. Registrazione Tag se mai visto prima
+// 2. Registrazione Tag se mai visto prima (viene inserito in stato 'pending' = NON ATTIVO)
 $existing = $repo->find($uid);
 if ($existing === null) {
-    $repo->register($uid);
+    $repo->register($uid, null, 'pending');
+    $scanId = $repo->logScan($uid, $result->readCounter, true, 'not_activated');
+    respond(200, 'not_activated', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
 }
 
 // 3. Controllo Tag Revocato
-if ($repo->isRevoked($uid)) {
+if ($existing['status'] === 'revoked') {
     $scanId = $repo->logScan($uid, $result->readCounter, true, 'revoked');
     respond(200, 'revoked', ['uid' => $uid], $scanId);
 }
 
-// 4. Controllo Anti-Replay Contatore
+// 4. Controllo Tag Non Ancora Attivato (status = 'pending' o diverso da 'active')
+if ($existing['status'] !== 'active') {
+    $scanId = $repo->logScan($uid, $result->readCounter, true, 'not_activated');
+    respond(200, 'not_activated', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
+}
+
+// 5. Se il tag è 'active', procedi con il controllo Anti-Replay ed avanzamento del contatore
 $counterOk = $repo->checkAndAdvanceCounter($uid, $result->readCounter);
 
 if (!$counterOk) {
@@ -128,6 +139,6 @@ if (!$counterOk) {
     respond(200, 'replay_suspected', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
 }
 
-// 5. Scansione Valida e Autentica
+// 6. Scansione Valida, Autentica e Attiva
 $scanId = $repo->logScan($uid, $result->readCounter, true, 'valid');
 respond(200, 'valid', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);

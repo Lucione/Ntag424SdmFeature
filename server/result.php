@@ -48,6 +48,14 @@ $statusConfigs = [
         'description'  => 'Il chip NFC fisico è originale ed è stato verificato con successo dal server di sicurezza.',
         'color'        => '#10b981',
     ],
+    'not_activated' => [
+        'badge_class'  => 'status-pending',
+        'icon'         => 'ℹ',
+        'title'        => 'Prodotto Non Ancora Attivato',
+        'subtitle'     => 'Tag NFC censito ma in attesa di abilitazione nel backend',
+        'description'  => 'Il chip NTAG 424 DNA è autentico ed è stato registrato a sistema. Tuttavia, questo specifico prodotto non è ancora stato abilitato dal gestore nel pannello di controllo backend.',
+        'color'        => '#3b82f6',
+    ],
     'replay' => [
         'badge_class'  => 'status-warning',
         'icon'         => '⚠',
@@ -160,6 +168,7 @@ $createdAt = $scanData['created_at'] ?? date('Y-m-d H:i:s');
         }
 
         .status-valid .badge-icon { background-color: #10b981; }
+        .status-pending .badge-icon { background-color: #3b82f6; }
         .status-warning .badge-icon { background-color: #f59e0b; }
         .status-invalid .badge-icon { background-color: #ef4444; }
 
