@@ -87,13 +87,12 @@ server/
    `SunVerifier::deriveMacSessionKey` calculates `KSesSDMMAC` using session vector `SV2`:
    `SV2 = 0x3C 0xC3 0x00 0x01 0x00 0x80 || UID || ReadCounter`
    `Cmac::generate` computes the full CMAC and `Cmac::shorten` extracts the 8-byte shortened CMAC.
-5. **Anti-Replay & Counter Validation:**  
-   `TagRepository::checkAndAdvanceCounter` checks that `ReadCounter > last_counter` in a database transaction.
-6. **JSON Response:**  
-   Returns `{ "outcome": "valid", "uid": "...", "counter": 123 }` or error states (`replay_suspected`, `mac_invalid`, `revoked`).
-
-### Database Tag Lifecycle Management (UPSERT)
-A dedicated MySQL script is provided in `server/scripts/upsert_tag.sql` and exposed via `TagRepository::upsertTag(...)` to manage tag provisioning, batch registration, label assignment, revocation (`status = 'revoked'`), or counter re-synchronization.
+5. **Tag Registration & Pending Activation Control:**  
+   If the tag UID is not yet registered in the `tags` database, `verify.php` registers it in a `pending` (inactive) status, logs `outcome = 'not_activated'`, and redirects to `result.php` showing a blue notification badge. The tag must be explicitly activated in the backend (`status = 'active'`) before scans yield a `valid` outcome.
+6. **Anti-Replay & Counter Validation:**  
+   For active tags, `TagRepository::checkAndAdvanceCounter` checks that `ReadCounter > last_counter` in a database transaction.
+7. **PRG Pattern & Visual HTML Response:**  
+   `verify.php` redirects to `result.php?scan_id=...&outcome=...` showing a visual authenticity badge (`valid`, `not_activated`, `replay_suspected`, `mac_invalid`, `revoked`).
 
 ---
 
@@ -283,7 +282,7 @@ The CMAC is VALIDATED (AES)
 Plaintext Counter: 
 NDEF message: https://sdm.nfcdeveloper.com/tagpt?ctr=000003&cmac=C288EB1DF43C6A78
 UID:
-Counter:000003
+Counter:
 CMAC:C288EB1DF43C6A78
 The CMAC is VALIDATED (AES)
 

@@ -354,9 +354,9 @@ La directory `server/` contiene l'infrastruttura completa lato server (sviluppat
 ```
 server/
 ├── config.php            # Configurazione chiavi AES e parametri DB
-├── schema.sql            # Struttura delle tabelle MySQL (`tags` e `scan_log`)
-├── verify.php            # REST Endpoint invocato dal browser dello smartphone
-├── result.php            # Pagina HTML con Bollino di Autenticità per il consumatore
+├── schema.sql            # Struttura delle tabelle MySQL (`tags` e `scan_log`) con status 'pending'
+├── verify.php            # REST Endpoint invocato dal browser dello smartphone (Flusso di attivazione)
+├── result.php            # Pagina HTML con Bollino di Autenticità (Stato 'valid', 'not_activated', ecc.)
 ├── scripts/
 │   └── upsert_tag.sql    # Stored Procedure & SQL UPSERT per gestione ciclo di vita tag
 └── src/
@@ -389,10 +389,9 @@ L'algoritmo implementato in `server/src/SunVerifier.php` garantisce una perfetta
    - Troncamento a 8 byte (`Cmac::shorten`): estrazione dei byte con indice dispari (indici 1, 3, 5, 7, 9, 11, 13, 15).
    - Confronto a tempo costante con `hash_equals()` per prevenire attacchi di timing.
 
-5. **Protezione Anti-Replay e Anti-Cloning (`TagRepository::checkAndAdvanceCounter`)**:
-   In una transazione SQL atomica con blocco riga:
-   - Se `ReadCounter <= last_counter` registrato per quel tag, la scansione viene rifiutata con esito `'replay'` o `'replay_suspected'`.
-   - Se `ReadCounter > last_counter`, il valore viene aggiornato a database e l'esito è `'valid'`.
+5. **Verifica Abilitazione Tag Backend e Protezione Anti-Replay (`TagRepository::checkAndAdvanceCounter`)**:
+   - **Tag Nuovo / Non Registrato**: Viene registrato a database con `status = 'pending'`. La scansione viene salvata con `outcome = 'not_activated'` ed il browser reindirizzato a `result.php` indicando che il prodotto è in attesa di abilitazione backend. Nessun contatore viene avanzato.
+   - **Tag Attivo (`status = 'active'`)**: In una transazione SQL atomica con blocco riga, se `ReadCounter > last_counter`, il valore viene aggiornato ed il reindirizzamento mostra l'esito `'valid'`. Se `ReadCounter <= last_counter`, viene segnalato `'replay'`.
 
 ### 7.3 Note di Allineamento e Configurazione Chiavi (App Mobile <-> Server)
 
@@ -478,20 +477,17 @@ Lo script include:
 - **Istruzione `INSERT ... ON DUPLICATE KEY UPDATE`**: Utilizzabile direttamente in query batch per il censimento massivo di lotti di produzione o per l'integrazione con ORM/script PHP.
 
 ### 10.2 Integrazione in `TagRepository.php`
-La classe PHP `SunVerify\TagRepository` è stata estesa con il metodo dedicato:
+La classe PHP `SunVerify\TagRepository` è stata estesa con i metodi dedicati:
 
 ```php
-public function upsertTag(
-    string $uidHex,
-    ?string $label = null,
-    string $status = 'active',
-    int $lastCounter = -1
-): void
+public function register(string $uidHex, ?string $label = null, string $status = 'pending'): void
+public function upsertTag(string $uidHex, ?string $label = null, string $status = 'pending', int $lastCounter = -1): void
+public function isActive(string $uidHex): bool
 ```
 
 Questa funzione permette all'applicazione server di:
 - Registrare o aggiornare dinamicamente l'etichetta (`label`) o lotto di prodotto associato al seriale `uid_hex`.
-- Modificare lo stato di validità del tag (`status = 'active'` oppure `'revoked'`).
+- Gestire lo stato di validità del tag (`status = 'pending'`, `'active'` oppure `'revoked'`).
 - Risincronizzare il valore di `last_counter` a seguito di un'operazione di reset o riprogrammazione effettuata via mobile app.
 
 ---
@@ -515,6 +511,7 @@ Per evitare che il ricaricamento automatico della pagina web o il re-focus del b
 | Esito (`outcome`) | Bollino Visuale HTML | Descrizione Utente |
 | :--- | :--- | :--- |
 | **`valid`** | **Bollino Verde (✓)** | **Prodotto Autentico e Verificato**: Il chip NFC fisico è originale ed è stato verificato con successo dal server. |
+| **`not_activated`** | **Bollino Blu (ℹ)** | **Prodotto Non Ancora Attivato**: Il tag NFC è autentico ed è stato censito nel DB, ma è in stato 'pending' in attesa di abilitazione dal backend. |
 | **`replay`** / **`replay_suspected`** | **Bollino Arancione (⚠)** | **Attenzione: Scansione Duplicata**: URL NFC già utilizzata in precedenza (Anti-Replay). Previene il riuso delle URL. |
 | **`mac_invalid`** | **Bollino Rosso (✕)** | **Prodotto Non Autentico**: Firma crittografica non valida o chip clonato. |
 | **`revoked`** | **Bollino Rosso (⛔)** | **Tag Revocato o Bloccato**: Il seriale del tag risulta ritirato nel database centrale. |

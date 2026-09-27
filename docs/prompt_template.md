@@ -1,5 +1,5 @@
 "Agisci come Lead Mobile Architect ed esperto NFC. Fai riferimento al file di documentazione docs/context_baseline.md per comprendere l'architettura attuale, 
-la gestione delle chiavi AES e i flussi di comunicazione con il tag NXP NTAG 424 DNA del progetto.
+la gestione delle chiavi AES, la struttura del server e i flussi di comunicazione con il tag NXP NTAG 424 DNA del progetto.
 
 Non scansionare nuovamente tutto il repository ex-novo; parti direttamente dalla baseline fornita.
 
