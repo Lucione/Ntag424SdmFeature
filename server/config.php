@@ -17,7 +17,7 @@ return [
     // deve essere IDENTICA a quella usata in fase di personalizzazione del tag
     // (vedi KeyInfo.generateKeyForCardUid() nell'app Android).
     'file_read_master_key' => hex2bin('00000000000000000000000000000000'),
-    'diversify_file_read_key' => true,
+    'diversify_file_read_key' => false,
 
     // Devono combaciare esattamente con applicationId/systemIdentifier usati
     // in fase di personalizzazione (vedi KeyInfo.java nell'app Android).
