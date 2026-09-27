@@ -1,14 +1,17 @@
 <?php
 declare(strict_types=1);
-ini_set('display_errors', '1'); 
+ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
 /**
- * Endpoint chiamato dal browser del consumatore quando legge il tag con
- * il proprio telefono (lettura NFC nativa -> apertura URL -> questa pagina).
- * URL attesa: https://tuodominio/verify.php?picc_data=<hex>&cmac=<hex>
- * (i nomi dei parametri devono combaciare con i placeholder {PICC} e {MAC}
- * usati in NdefTemplateMaster lato Android).
+ * Endpoint chiamato dal browser dello smartphone quando legge il tag NFC.
+ * URL attesa: https://tuodominio/verify.php?uid=<hex>&picc_data=<hex>&cmac=<hex>
+ *
+ * Implementa il pattern PRG (Post/Redirect/Get):
+ * 1. Decifra e verifica la firma del tag.
+ * 2. Registra l'esito nel database (`scan_log`).
+ * 3. Reindirizza il browser dell'utente a `result.php?scan_id=...&outcome=...`
+ *    evitando che refreshes/ricaricamenti del browser rieseguano il ciclo di verifica.
  */
 
 require __DIR__ . '/src/Cmac.php';
@@ -19,22 +22,45 @@ require __DIR__ . '/src/TagRepository.php';
 use SunVerify\SunVerifier;
 use SunVerify\TagRepository;
 
-header('Content-Type: application/json; charset=utf-8');
+$config = require __DIR__ . '/config.php';
 
-function respond(int $httpStatus, string $outcome, array $extra = []): never
+// Determina se la richiesta proviene da un'API (es. App Mobile) o dal Browser
+function isJsonRequested(): bool
 {
-    http_response_code($httpStatus);
-    echo json_encode(array_merge(['outcome' => $outcome], $extra), JSON_UNESCAPED_SLASHES);
-    exit;
+    if (isset($_GET['format']) && strtolower($_GET['format']) === 'json') {
+        return true;
+    }
+    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+    return str_contains(strtolower($accept), 'application/json');
 }
 
-$config = require __DIR__ . '/config.php';
+function respond(int $httpStatus, string $outcome, array $extra = [], ?int $scanId = null): never
+{
+    if (isJsonRequested()) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code($httpStatus);
+        echo json_encode(array_merge(['outcome' => $outcome], $extra), JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    // Reindirizzamento PRG (Post-Redirect-Get) per la visualizzazione dell'esito in HTML
+    $targetUrl = 'result.php?outcome=' . urlencode($outcome);
+    if ($scanId !== null) {
+        $targetUrl .= '&scan_id=' . $scanId;
+    }
+    if (isset($extra['uid'])) {
+        $targetUrl .= '&uid=' . urlencode($extra['uid']);
+    }
+
+    header('Location: ' . $targetUrl, true, 302);
+    exit;
+}
 
 $uidHex = $_GET['uid'] ?? '';
 $piccDataHex = $_GET['picc_data'] ?? '';
 $cmacHex = $_GET['cmac'] ?? '';
 
-if ($uidHex === '' || $piccDataHex === '' || $cmacHex === '') {
+if ($piccDataHex === '' || $cmacHex === '') {
     respond(400, 'missing_params');
 }
 
@@ -51,7 +77,6 @@ try {
         \PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (\PDOException $e) {
-    // Non esporre credenziali/dettagli di connessione in produzione; loggare $e altrove.
     respond(500, 'db_connection_error');
 }
 
@@ -70,36 +95,39 @@ try {
 } catch (\InvalidArgumentException $e) {
     respond(400, 'bad_format', ['message' => $e->getMessage()]);
 } catch (\Throwable $e) {
-    // Non esporre dettagli interni in produzione; loggare $e altrove.
     respond(500, 'internal_error');
 }
 
 $uid = $result->uidHex;
 
+// 1. Verificazione della firma CMAC
 if (!$result->macValid) {
-    $repo->register($uid); // registriamo comunque l'UID visto, anche se il MAC non torna
-    $repo->logScan($uid, $result->readCounter, false, 'mac_invalid');
-    respond(200, 'mac_invalid', ['uid' => $uid]);
+    $repo->register($uid);
+    $scanId = $repo->logScan($uid, $result->readCounter, false, 'mac_invalid');
+    respond(200, 'mac_invalid', ['uid' => $uid], $scanId);
 }
 
+// 2. Registrazione Tag se mai visto prima
 $existing = $repo->find($uid);
 if ($existing === null) {
     $repo->register($uid);
 }
 
+// 3. Controllo Tag Revocato
 if ($repo->isRevoked($uid)) {
-    $repo->logScan($uid, $result->readCounter, true, 'revoked');
-    respond(200, 'revoked', ['uid' => $uid]);
+    $scanId = $repo->logScan($uid, $result->readCounter, true, 'revoked');
+    respond(200, 'revoked', ['uid' => $uid], $scanId);
 }
 
+// 4. Controllo Anti-Replay Contatore
 $counterOk = $repo->checkAndAdvanceCounter($uid, $result->readCounter);
 
 if (!$counterOk) {
-    // MAC valido ma contatore non avanzato: probabile scansione duplicata,
-    // URL rigiocata, o clone che condivide chiave e stato ma non il counter reale.
-    $repo->logScan($uid, $result->readCounter, true, 'replay');
-    respond(200, 'replay_suspected', ['uid' => $uid, 'counter' => $result->readCounter]);
+    // Scansione duplicata / Replay
+    $scanId = $repo->logScan($uid, $result->readCounter, true, 'replay');
+    respond(200, 'replay_suspected', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
 }
 
-$repo->logScan($uid, $result->readCounter, true, 'valid');
-respond(200, 'valid', ['uid' => $uid, 'counter' => $result->readCounter]);
+// 5. Scansione Valida e Autentica
+$scanId = $repo->logScan($uid, $result->readCounter, true, 'valid');
+respond(200, 'valid', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);

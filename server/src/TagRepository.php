@@ -105,7 +105,8 @@ final class TagRepository
         return $row !== null && $row['status'] === 'revoked';
     }
 
-    public function logScan(string $uidHex, ?int $counter, bool $macValid, string $outcome): void
+    /** Registra la scansione nella tabella `scan_log` e restituisce l'ID del log generato (`scan_id`). */
+    public function logScan(string $uidHex, ?int $counter, bool $macValid, string $outcome): int
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO scan_log (uid_hex, counter, mac_valid, outcome, ip, user_agent)
@@ -119,5 +120,20 @@ final class TagRepository
             'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
             'ua' => $_SERVER['HTTP_USER_AGENT'] ?? null,
         ]);
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    /** Recupera i dettagli di una scansione salvata per ID e unisce le informazioni del tag (label). */
+    public function getScanLog(int $scanId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT s.*, t.label, t.status AS tag_status
+             FROM scan_log s
+             LEFT JOIN tags t ON s.uid_hex = t.uid_hex
+             WHERE s.id = :id'
+        );
+        $stmt->execute(['id' => $scanId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $row === false ? null : $row;
     }
 }

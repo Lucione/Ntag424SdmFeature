@@ -23,8 +23,10 @@ Ntag424_ORG/
 │           ├── de/androidcrypto/ntag424sdmfeature/   # Layer UI & Workflow Application
 │           └── net/bplearning/ntag424/              # Layer Core Protocol, Crypto & Commands
 ├── server/                                         # Backend Server PHP/MySQL (SUN Verification Engine)
+│   ├── verify.php                                  # Endpoint PRG per l'invocazione da tap NFC
+│   ├── result.php                                  # Pagina HTML con Bollino di Autenticità per il consumatore
 │   ├── scripts/
-│   │   └── upsert_tag.sql                          # MySQL Stored Procedure e Query UPSERT
+│   │   └── upsert_tag.sql                          # Stored Procedure e Query UPSERT
 │   └── src/                                        # SunVerifier, Cmac, Diversify, TagRepository
 └── docs/                                           # Datasheet NXP, specifiche ISO/IEC e documentazione
 ```
@@ -354,6 +356,7 @@ server/
 ├── config.php            # Configurazione chiavi AES e parametri DB
 ├── schema.sql            # Struttura delle tabelle MySQL (`tags` e `scan_log`)
 ├── verify.php            # REST Endpoint invocato dal browser dello smartphone
+├── result.php            # Pagina HTML con Bollino di Autenticità per il consumatore
 ├── scripts/
 │   └── upsert_tag.sql    # Stored Procedure & SQL UPSERT per gestione ciclo di vita tag
 └── src/
@@ -490,3 +493,28 @@ Questa funzione permette all'applicazione server di:
 - Registrare o aggiornare dinamicamente l'etichetta (`label`) o lotto di prodotto associato al seriale `uid_hex`.
 - Modificare lo stato di validità del tag (`status = 'active'` oppure `'revoked'`).
 - Risincronizzare il valore di `last_counter` a seguito di un'operazione di reset o riprogrammazione effettuata via mobile app.
+
+---
+
+## 11. Pattern PRG (Post-Redirect-Get) e Visualizzazione dell'Esito HTML (`result.php`)
+
+### 11.1 Flusso PRG Anti-Replay sul Server (`verify.php` -> `result.php`)
+Per evitare che il ricaricamento automatico della pagina web o il re-focus del browser mobile durante il tap NFC provochino doppi log e falsi allarmi di Replay, il backend adotta il pattern **Post-Redirect-Get (PRG)**:
+
+1. **Richiesta Iniziale (`verify.php`)**:
+   L'endpoint `verify.php` riceve i parametri dell'URL dal tag NFC. Esegue la verifica crittografica (`SunVerifier::verify`), registra il risultato nella tabella `scan_log` ottenendo l'ID univoco `$scanId = $repo->logScan(...)`.
+2. **Reindirizzamento HTTP 302 (`Location: result.php`)**:
+   Invece di restituire direttamente un payload JSON al browser dell'utente, `verify.php` esegue un reindirizzamento HTTP 302 verso la pagina HTML dell'esito:
+   `header('Location: result.php?scan_id=' . $scanId . '&outcome=' . $outcome);`
+3. **Rendering HTML e Ricaricamento Sicuro (`result.php`)**:
+   La pagina `server/result.php` legge il record di scansione memorizzato a database (`$repo->getScanLog($scanId)`) e mostra al consumatore un bollino visuale di autenticità.
+   - **Ricaricamento/Refresh della Scheda**: Se l'utente aggiorna la pagina o se Chrome ricarica la scheda, `result.php` si limita a rileggere i dati della scansione `$scanId` senza invocare nuovamente `verify.php` né incrementare i contatori, eliminando alla radice i duplicati da browser.
+
+### 11.2 Bollini Visuali di Autenticità in `result.php`
+
+| Esito (`outcome`) | Bollino Visuale HTML | Descrizione Utente |
+| :--- | :--- | :--- |
+| **`valid`** | **Bollino Verde (✓)** | **Prodotto Autentico e Verificato**: Il chip NFC fisico è originale ed è stato verificato con successo dal server. |
+| **`replay`** / **`replay_suspected`** | **Bollino Arancione (⚠)** | **Attenzione: Scansione Duplicata**: URL NFC già utilizzata in precedenza (Anti-Replay). Previene il riuso delle URL. |
+| **`mac_invalid`** | **Bollino Rosso (✕)** | **Prodotto Non Autentico**: Firma crittografica non valida o chip clonato. |
+| **`revoked`** | **Bollino Rosso (⛔)** | **Tag Revocato o Bloccato**: Il seriale del tag risulta ritirato nel database centrale. |
