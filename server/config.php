@@ -9,14 +9,14 @@ return [
     // come chiave associata a SDMMetaRead). NON va diversificata per UID: serve
     // proprio a scoprire l'UID, quindi deve essere la stessa per tutti i tag
     // che condividono questo slot di chiave.
-    'meta_read_key' => hex2bin('00112233445566778899AABBCCDDEEFF'),
+    'meta_read_key' => hex2bin('00000000000000000000000000000000'),
 
     // Chiave master usata per il MAC dei dati dinamici (SDMFileRead).
     // Se 'diversify_file_read_key' è true, la chiave EFFETTIVA per ogni tag
     // sarà AN10922::aes128(fileReadMasterKey, uid, applicationId, systemIdentifier) -
     // deve essere IDENTICA a quella usata in fase di personalizzazione del tag
     // (vedi KeyInfo.generateKeyForCardUid() nell'app Android).
-    'file_read_master_key' => hex2bin('00112233445566778899AABBCCDDEEFF'),
+    'file_read_master_key' => hex2bin('00000000000000000000000000000000'),
     'diversify_file_read_key' => true,
 
     // Devono combaciare esattamente con applicationId/systemIdentifier usati
