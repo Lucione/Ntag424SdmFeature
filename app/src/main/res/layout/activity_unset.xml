@@ -24,14 +24,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="10dp"
-                android:text="5 Unset the SUN feature"
+                android:text="Ripristino Fabbrica Tag (Unset Tag)"
                 android:textAlignment="center"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -44,14 +45,30 @@
                 app:dividerInsetStart="8dp" />
 
             <TextView
-                android:id="@+id/tvMenu1"
+                android:id="@+id/tvMenu1Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Write the default Capability Container (CC) to file 1 and clear the file 2 on the tag. Change the application keys to default and unsets any SDM feature."
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:text="Cancella tutte le configurazioni di sicurezza SUN e ripristina il tag alle condizioni originali di fabbrica, rendendolo completamente riutilizzabile."
                 android:textAlignment="center"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textSize="15sp"
+                android:textStyle="normal" />
+
+            <TextView
+                android:id="@+id/tvParamsWritten"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/share_rounded_corner_light_orange_with_border"
+                android:padding="8dp"
+                android:text="• Parametri Scritti/Azzerati sul Tag in seguito al tap:\n- File 01 (CC): Scrittura Capability Container di fabbrica\n- File 02 (NDEF): Azzeramento 256 byte (0x00), sdmEnabled = false, readWritePerm = ACCESS_EVERYONE (permessi aperti)\n- Chiavi Applicative: Ripristino Key 1..4 a 0x00*16 (Default)"
+                android:textColor="@color/black"
+                android:textSize="13sp"
+                android:textStyle="normal" />
 
             <TextView
                 android:id="@+id/tvInformation"
@@ -60,19 +77,17 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginEnd="16dp"
-                android:background="@drawable/share_rounded_corner_light_orange_with_border"
                 android:padding="4dp"
-                android:text="Please note: when a NTAG424DNA tag is tapped to the NFC reader the action runs without any further confirmation."
+                android:text="Avviso: L'operazione di ripristino si avvierà immediatamente non appena avvicinerai il chip al lettore NFC."
                 android:textAlignment="center"
                 android:textColor="@color/black"
-                android:textSize="18sp"
-                android:textStyle="normal"
-                android:visibility="visible" />
+                android:textSize="14sp"
+                android:textStyle="italic" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 app:dividerInsetEnd="8dp"
                 app:dividerInsetStart="8dp" />
 
@@ -82,8 +97,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
-                android:orientation="vertical"
-                android:visibility="visible">
+                android:orientation="vertical">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/etOutputLayout"
@@ -91,16 +105,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="8dp"
                     android:layout_marginEnd="8dp"
-                    android:hint="operation output"
+                    android:hint="Esito Operazione Tag / Log"
                     app:boxCornerRadiusBottomEnd="5dp"
                     app:boxCornerRadiusBottomStart="5dp"
                     app:boxCornerRadiusTopEnd="5dp"
-                    app:boxCornerRadiusTopStart="5dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
+                    app:boxCornerRadiusTopStart="5dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etOutput"
@@ -108,17 +119,10 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:focusable="false"
-                        android:text="choose an operation ..."
+                        android:text="Avvicina un tag NTAG 424 DNA per eseguire il ripristino di fabbrica..."
                         android:typeface="monospace"
                         tools:ignore="KeyboardInaccessibleWidget" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    app:dividerInsetEnd="8dp"
-                    app:dividerInsetStart="8dp" />
 
             </LinearLayout>
 

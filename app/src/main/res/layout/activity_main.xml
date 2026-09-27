@@ -24,18 +24,20 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="10dp"
-                android:text="Main Menu"
+                android:padding="12dp"
+                android:text="Menu Principale Configurazione NTAG 424 DNA"
                 android:textAlignment="center"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
+            <!-- MENU 1: PREPARE -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -47,9 +49,10 @@
                 android:id="@+id/tvMenu1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Prepare the tag for NDEF operations"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="1. Preparazione Iniziale del Tag (Prepare Tag)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -57,12 +60,11 @@
                 android:id="@+id/tvMenu1Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the Capability Container (CC) to file 1 and an URL template to file 2 on the tag."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Inizializza la struttura base per consentire la gestione di messaggi NFC NDEF standard.\n• Parametri Scritti sul Tag: File 01 (CC File con accesso aperto), File 02 (URL NDEF iniziale), Chiavi applicative Key 3/4."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -73,8 +75,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_mint"
-                android:text="Prepare the tag for NDEF operations" />
+                android:text="Avvia Preparazione Iniziale Tag" />
 
+            <!-- MENU 2: PLAINTEXT SUN -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -86,9 +89,10 @@
                 android:id="@+id/tvMenu2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Setup Plaintext SUN Message"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="2. Messaggio SUN in Chiaro (Plaintext SUN)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -96,12 +100,11 @@
                 android:id="@+id/tvMenu2Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the URL template for a Plaintext SUN Message to file 2 on the tag."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Programma il tag per generare un link web con seriale (UID) e contatore di letture visibili in chiaro, firmato da un codice di autenticità (CMAC).\n• Parametri Scritti sul Tag: File 02 (URL NDEF), FileSettings File 02 (sdmEnabled=true, sdmUidOffset, sdmReadCounterOffset, sdmMacOffset, changePerm=Key 0)."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -112,8 +115,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_green"
-                android:text="Setup Plaintext SUN Message" />
+                android:text="Configura SUN in Chiaro" />
 
+            <!-- MENU 3: ENCRYPTED SUN -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -125,9 +129,10 @@
                 android:id="@+id/tvMenu3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Setup Encrypted SUN Message"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="3. Messaggio SUN Cifrato Sicuro (Encrypted SUN)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -135,12 +140,11 @@
                 android:id="@+id/tvMenu3Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the URL template for an Encrypted SUN Message to file 2 on the tag."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Massima privacy: l'identificativo del tag e il contatore di letture vengono cifrati in un blocco protetto (PICCData) decifrabile solo dal tuo server.\n• Parametri Scritti sul Tag: File 02 (URL con {PICC} e {MAC}), FileSettings File 02 (sdmEnabled=true, sdmMetaReadPerm=Key 2, sdmPiccDataOffset, sdmMacOffset)."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -151,8 +155,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_green"
-                android:text="Setup Encrypted SUN Message" />
+                android:text="Configura SUN Cifrato (Consigliato)" />
 
+            <!-- MENU 4: ENCRYPTED FILE SUN -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -164,9 +169,10 @@
                 android:id="@+id/tvMenu4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Setup Encrypted File SUN Message"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="4. SUN Cifrato con Dati File Aggiuntivi (Encrypted File SUN)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -174,12 +180,11 @@
                 android:id="@+id/tvMenu4Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the URL template for an Encrypted File SUN Message to file 2 on the tag."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Oltre al blocco PICCData, cifra ed inserisce nell'URL anche dati memorizzati nel file (es. data/ora di programmazione e codice segreto).\n• Parametri Scritti sul Tag: File 02 (URL con {PICC}, {FILE}, {MAC}), File 02 Data (Timestamp+Codice), FileSettings (sdmOptionEncryptFileData=true, sdmEncOffset, sdmEncLength)."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -190,10 +195,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_green"
-                android:text="Setup Encrypted File SUN Message" />
+                android:text="Configura SUN Cifrato + Dati File" />
 
-
-
+            <!-- MENU 6: NDEF READER -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -205,9 +209,10 @@
                 android:id="@+id/tvMenu6"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="NDEF Reader"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="5. Lettore NDEF e Simula Verifica Server (NDEF Reader)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -215,12 +220,11 @@
                 android:id="@+id/tvMenu6Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Acts like a backend server, decrypts encrypted data and validates the electronic signature"
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Simula il server di verifica: legge il messaggio dal tag, decifra i dati PICCData e verifica se la firma elettronica (CMAC) è autentica o clonata.\n• Variabili Lette dal Tag: NDEF Record URI, Blocco PICCData cifrato, Firma CMAC."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -231,8 +235,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_dark_orange"
-                android:text="NDEF Reader (acting like a backend server)" />
+                android:text="Apri Lettore &amp; Verificatore NDEF" />
 
+            <!-- MENU 7: READ COUNTER LIMIT -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -244,9 +249,10 @@
                 android:id="@+id/tvMenu7"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Setup Plaintext Read Counter Limit SUN Message"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="6. SUN in Chiaro con Limite di Scansioni (Counter Limit)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -254,12 +260,11 @@
                 android:id="@+id/tvMenu7Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the URL template for a Plaintext SUN Message to file 2 on the tag. A Read Counter Limit of '3' is setup to prevent more tag readings."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Configura un limite massimo di letture (es. 3 scansioni) oltre il quale il chip smetterà di aggiornare i parametri dinamici nell'URL.\n• Parametri Scritti sul Tag: File 02 (URL NDEF), FileSettings File 02 (sdmOptionReadCounterLimit=true, sdmReadCounterLimit=3)."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -270,8 +275,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_green"
-                android:text="Setup Plaintext with Read Counter Limit SUN Message" />
+                android:text="Configura SUN con Limite 3 Scansioni" />
 
+            <!-- MENU 8: CUSTOM KEYS -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -283,9 +289,10 @@
                 android:id="@+id/tvMenu8"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Setup Encrypted File SUN Message with Custom Keys"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="7. SUN Cifrato con Chiavi Personalizzate (Custom Keys)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -293,12 +300,11 @@
                 android:id="@+id/tvMenu8Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the URL template for an Encrypted File SUN Message to file 2 on the tag. This is using CUSTOM keys."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Aumenta la sicurezza sostituendo le chiavi di fabbrica con chiavi segrete applicative personalizzate (Key 1..4 = A1... A4...).\n• Parametri Scritti sul Tag: Scrittura nuove chiavi AES Key 1..4, File 02 (URL Cifrata), FileSettings File 02."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -309,8 +315,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_green"
-                android:text="Setup Encrypted File SUN Message with Custom Keys" />
+                android:text="Configura SUN con Chiavi Custom" />
 
+            <!-- MENU 10: DIVERSIFIED KEYS -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -322,9 +329,10 @@
                 android:id="@+id/tvMenu10"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Setup Encrypted File SUN Message with Diversified Keys"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="8. SUN Cifrato con Chiavi Diversificate per Tag (AN10922)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -332,12 +340,11 @@
                 android:id="@+id/tvMenu10Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the URL template for an Encrypted File SUN Message to file 2 on the tag. This is using DIVERSIFIED keys."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Calcola e programma una chiave unica per ogni singolo chip derivata dal suo numero seriale hardware (AN10922).\n• Parametri Scritti sul Tag: Key 4 Diversificata (AES-CMAC di MasterKey + UID), File 02 (URL Cifrata), FileSettings File 02."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -348,8 +355,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_green"
-                android:text="Setup Encrypted File SUN Message with Diversified Keys" />
+                android:text="Configura SUN con Chiavi Diversificate" />
 
+            <!-- MENU 9: TAG OVERVIEW -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -357,14 +365,14 @@
                 app:dividerInsetEnd="8dp"
                 app:dividerInsetStart="8dp" />
 
-
             <TextView
                 android:id="@+id/tvMenu9"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Tag Overview"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="9. Diagnostica e Stato del Tag (Tag Overview)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -372,12 +380,11 @@
                 android:id="@+id/tvMenu9Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Gives an overview about the tag"
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Esegue un'ispezione completa del chip NFC, verificando l'autenticazione, lo stato delle chiavi e tutti i permessi dei file.\n• Variabili Lette dal Tag: Serial Hardware UID (7 byte), Stato e Versione Chiavi, FileSettings dei File 01, 02 e 03."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -388,8 +395,9 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_light_background_green"
-                android:text="Overview about the tag" />
+                android:text="Mostra Diagnostica Completa Tag" />
 
+            <!-- MENU 5: UNSET -->
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -401,9 +409,10 @@
                 android:id="@+id/tvMenu5"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Unset the SDM Feature (fabric settings)"
-                android:textAlignment="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:text="10. Ripristino Impostazioni di Fabbrica (Unset Tag)"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -411,12 +420,11 @@
                 android:id="@+id/tvMenu5Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the default Capability Container (CC) to file 1 and clear file 2 on the tag."
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:layout_marginTop="4dp"
+                android:text="Cancella tutte le impostazioni di sicurezza SUN e ripristina il tag alle condizioni di fabbrica originali (riutilizzabile).\n• Parametri Scritti sul Tag: File 01 (CC Fabbrica), File 02 (Azzera 256 byte a 0x00, sdmEnabled=false, readWritePerm=ACCESS_EVERYONE), Reset Chiavi Key 1..4 a 0x00*16."
+                android:textSize="14sp"
                 android:textStyle="normal" />
 
             <Button
@@ -427,19 +435,12 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:backgroundTint="@color/application_color_background_red"
-                android:text="Unset the SUN feature (fabric settings)" />
+                android:text="Reset Completo alle Impostazioni di Fabbrica" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:dividerInsetEnd="8dp"
-                app:dividerInsetStart="8dp" />
-
-            <com.google.android.material.divider.MaterialDivider
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="16dp"
                 app:dividerInsetEnd="8dp"
                 app:dividerInsetStart="8dp" />
 
@@ -447,4 +448,3 @@
 
     </ScrollView>
 </LinearLayout>
-

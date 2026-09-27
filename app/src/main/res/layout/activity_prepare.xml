@@ -24,14 +24,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="10dp"
-                android:text="Prepare the tag for NDEF operations"
+                android:text="Preparazione Iniziale Tag (Prepare Tag)"
                 android:textAlignment="center"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -44,36 +45,38 @@
                 app:dividerInsetStart="8dp" />
 
             <TextView
-                android:id="@+id/tvMenu1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:padding="16dp"
-                android:text="Write the Capability Container and URL template"
-                android:textAlignment="center"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
                 android:id="@+id/tvMenu1Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the modified Capability Container (CC) to file 1 and the URL template to file 2 on the tag"
+                android:text="Inizializza la struttura base per la gestione di messaggi NFC NDEF standard. Scrive la Capability Container (CC) nel File 01 e imposta il template URL base nel File 02."
                 android:textAlignment="center"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="15sp"
+                android:textStyle="normal" />
+
+            <TextView
+                android:id="@+id/tvParamsWritten"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/share_rounded_corner_light_orange_with_border"
+                android:padding="8dp"
+                android:text="• Parametri Scritti sul Tag in seguito al tap:\n- File 01 (CC): 000F20003A00340406E10401000000 (CC con permessi aperti)\n- File 02 (NDEF): Template URL NDEF iniziale\n- Chiavi Applicative: Aggiornamento Key 3 e Key 4 (Statica o Diversificata)"
+                android:textColor="@color/black"
+                android:textSize="13sp"
+                android:textStyle="normal" />
 
             <TextView
                 android:id="@+id/tvMenu2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Select the Key Number 4 Source"
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:padding="12dp"
+                android:text="Seleziona la Sorgente per la Chiave Applicativa 4:"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
             <RadioGroup
@@ -82,23 +85,21 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:layout_gravity="center_horizontal"
-                android:gravity="start"
                 android:orientation="vertical">
 
                 <RadioButton
                     android:id="@+id/rbKey4Static"
                     android:layout_width="wrap_content"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="Use a STATIC Key 4 (used for Encrypted File data and CMAC) (endpoint is not working, use NDEF Reader instead)" />
+                    android:text="Usa una Key 4 STATICA (A4000000...)" />
 
                 <RadioButton
                     android:id="@+id/rbKey4Diversified"
                     android:layout_width="wrap_content"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:checked="false"
-                    android:text="Use a Tag UID - DIVERSIFIED Key 4 (used for Encrypted File data and CMAC) (endpoint is not working, use NDEF Reader instead)" />
+                    android:text="Usa una Key 4 DIVERSIFICATA dall'UID unico del tag (AN10922)" />
 
             </RadioGroup>
 
@@ -109,19 +110,17 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginEnd="16dp"
-                android:background="@drawable/share_rounded_corner_light_orange_with_border"
                 android:padding="4dp"
-                android:text="Please note: when a NTAG424DNA tag is tapped to the NFC reader the action runs without any further confirmation."
+                android:text="Avviso: L'operazione di preparazione del tag si avvierà immediatamente non appena avvicinerai il chip al lettore NFC."
                 android:textAlignment="center"
                 android:textColor="@color/black"
-                android:textSize="18sp"
-                android:textStyle="normal"
-                android:visibility="visible" />
+                android:textSize="14sp"
+                android:textStyle="italic" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 app:dividerInsetEnd="8dp"
                 app:dividerInsetStart="8dp" />
 
@@ -131,8 +130,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
-                android:orientation="vertical"
-                android:visibility="visible">
+                android:orientation="vertical">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/etOutputLayout"
@@ -140,16 +138,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="8dp"
                     android:layout_marginEnd="8dp"
-                    android:hint="operation output"
+                    android:hint="Esito Operazione Tag / Log"
                     app:boxCornerRadiusBottomEnd="5dp"
                     app:boxCornerRadiusBottomStart="5dp"
                     app:boxCornerRadiusTopEnd="5dp"
-                    app:boxCornerRadiusTopStart="5dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
+                    app:boxCornerRadiusTopStart="5dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etOutput"
@@ -157,17 +152,10 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:focusable="false"
-                        android:text="choose an operation ..."
+                        android:text="Avvicina un tag NTAG 424 DNA per eseguire la preparazione..."
                         android:typeface="monospace"
                         tools:ignore="KeyboardInaccessibleWidget" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    app:dividerInsetEnd="8dp"
-                    app:dividerInsetStart="8dp" />
 
             </LinearLayout>
 

@@ -24,14 +24,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="10dp"
-                android:text="Encrypted SUN Feature"
+                android:text="Configurazione Messaggio SUN Cifrato"
                 android:textAlignment="center"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -44,36 +45,38 @@
                 app:dividerInsetStart="8dp" />
 
             <TextView
-                android:id="@+id/tvMenu1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:padding="16dp"
-                android:text="Write the URL template for Encrypted SUN"
-                android:textAlignment="center"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
                 android:id="@+id/tvMenu1Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:layout_marginEnd="16dp"
-                android:text="Write the URL template for an Encrypted SUN Message to file 2 on the tag"
+                android:text="Programma il tag per la massima privacy ed anticontraffazione. L'identificativo del tag e il contatore di letture vengono cifrati in un blocco protetto (PICCData) decifrabile solo dal tuo server."
                 android:textAlignment="center"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="15sp"
+                android:textStyle="normal" />
+
+            <TextView
+                android:id="@+id/tvParamsWritten"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/share_rounded_corner_light_orange_with_border"
+                android:padding="8dp"
+                android:text="• Parametri Scritti sul Tag in seguito al tap:\n- File 02 (NDEF): URL https://logicarts.altervista.org/verify.php?uid={UID}&amp;picc_data={PICC}&amp;cmac={MAC}\n- FileSettings File 02: sdmEnabled = true, sdmMetaReadPerm = Key 2, sdmFileReadPerm = Key 2, sdmPiccDataOffset, sdmMacOffset\n- Permessi File 02: readWritePerm = Key 2, changePerm = Key 0 (Master Key per riprogrammazione reversibile)"
+                android:textColor="@color/black"
+                android:textSize="13sp"
+                android:textStyle="normal" />
 
             <TextView
                 android:id="@+id/tvMenu2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Select the Output Fields"
-                android:textAlignment="center"
-                android:textSize="16sp"
+                android:padding="12dp"
+                android:text="Seleziona la Modalità dei Campi Cifrati (PICCData):"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
             <RadioGroup
@@ -82,30 +85,28 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:layout_gravity="center_horizontal"
-                android:gravity="start"
                 android:orientation="vertical">
 
                 <RadioButton
                     android:id="@+id/rbFieldUid"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
+                    android:layout_height="wrap_content"
                     android:checked="false"
-                    android:text="(PICC with UID only) + CMAC (endpoint is not working, use NDEF Reader instead)" />
+                    android:text="Solo UID cifrato nel PICCData + Firma CMAC" />
 
                 <RadioButton
                     android:id="@+id/rbFieldCounter"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
+                    android:layout_height="wrap_content"
                     android:checked="false"
-                    android:text="(PICC with Counter only) + CMAC (endpoint is not working, use NDEF Reader instead)" />
+                    android:text="Solo Contatore cifrato nel PICCData + Firma CMAC" />
 
                 <RadioButton
                     android:id="@+id/rbFieldUidCounter"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
+                    android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="(PICC with UID + Counter) + CMAC" />
+                    android:text="UID e Contatore cifrati nel PICCData + Firma CMAC (Consigliato per Server)" />
 
             </RadioGroup>
 
@@ -116,19 +117,17 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginEnd="16dp"
-                android:background="@drawable/share_rounded_corner_light_orange_with_border"
                 android:padding="4dp"
-                android:text="Please note: when a NTAG424DNA tag is tapped to the NFC reader the action runs without any further confirmation."
+                android:text="Avviso: L'operazione di scrittura sul tag si avvierà immediatamente non appena avvicinerai il chip al lettore NFC del dispositivo."
                 android:textAlignment="center"
                 android:textColor="@color/black"
-                android:textSize="18sp"
-                android:textStyle="normal"
-                android:visibility="visible" />
+                android:textSize="14sp"
+                android:textStyle="italic" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 app:dividerInsetEnd="8dp"
                 app:dividerInsetStart="8dp" />
 
@@ -138,8 +137,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
-                android:orientation="vertical"
-                android:visibility="visible">
+                android:orientation="vertical">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/etOutputLayout"
@@ -147,16 +145,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="8dp"
                     android:layout_marginEnd="8dp"
-                    android:hint="operation output"
+                    android:hint="Esito Operazione Tag / Log"
                     app:boxCornerRadiusBottomEnd="5dp"
                     app:boxCornerRadiusBottomStart="5dp"
                     app:boxCornerRadiusTopEnd="5dp"
-                    app:boxCornerRadiusTopStart="5dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
+                    app:boxCornerRadiusTopStart="5dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etOutput"
@@ -164,17 +159,10 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:focusable="false"
-                        android:text="choose an operation ..."
+                        android:text="Avvicina un tag NTAG 424 DNA per eseguire la scrittura..."
                         android:typeface="monospace"
                         tools:ignore="KeyboardInaccessibleWidget" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    app:dividerInsetEnd="8dp"
-                    app:dividerInsetStart="8dp" />
 
             </LinearLayout>
 

@@ -24,14 +24,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="10dp"
-                android:text="9 Tag Overview"
+                android:text="Diagnostica e Stato del Tag (Tag Overview)"
                 android:textAlignment="center"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -44,25 +45,29 @@
                 app:dividerInsetStart="8dp" />
 
             <TextView
-                android:id="@+id/tvMenu1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Gives an overview about the tag"
-                android:textAlignment="center"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
                 android:id="@+id/tvMenu1Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_marginTop="0dp"
+                android:layout_marginTop="12dp"
                 android:layout_marginEnd="16dp"
-                android:text="Checks Authentication Scheme (AES/LRP), Keys, File Settings"
+                android:text="Esegue un'ispezione diagnostica completa del chip NFC, verificando l'autenticazione, lo stato delle chiavi applicative e i permessi dei file."
                 android:textAlignment="center"
-                android:textSize="16sp"
+                android:textSize="15sp"
+                android:textStyle="normal" />
+
+            <TextView
+                android:id="@+id/tvParamsWritten"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/share_rounded_corner_light_orange_with_border"
+                android:padding="8dp"
+                android:text="• Variabili Lette dal Tag in seguito al tap:\n- Serial Hardware (UID): Lettura dell'UID unico di fabbrica a 7 byte\n- Schema Autenticazione: Verifica modalità AES o LRP\n- Stato Chiavi: Test presenza chiavi di fabbrica o Custom su Key 1..4\n- FileSettings (File 01, 02, 03): Permessi (read, write, changePerm), sdmEnabled, offset e contatore di letture"
+                android:textColor="@color/black"
+                android:textSize="13sp"
                 android:textStyle="normal" />
 
             <TextView
@@ -72,19 +77,17 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginEnd="16dp"
-                android:background="@drawable/share_rounded_corner_light_orange_with_border"
                 android:padding="4dp"
-                android:text="Please note: when a NTAG424DNA tag is tapped to the NFC reader the action runs without any further confirmation."
+                android:text="Avviso: L'ispezione diagnostica del tag si avvierà immediatamente non appena avvicinerai il chip al lettore NFC del dispositivo."
                 android:textAlignment="center"
                 android:textColor="@color/black"
-                android:textSize="18sp"
-                android:textStyle="normal"
-                android:visibility="visible" />
+                android:textSize="14sp"
+                android:textStyle="italic" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 app:dividerInsetEnd="8dp"
                 app:dividerInsetStart="8dp" />
 
@@ -94,8 +97,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
-                android:orientation="vertical"
-                android:visibility="visible">
+                android:orientation="vertical">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/etOutputLayout"
@@ -103,16 +105,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="8dp"
                     android:layout_marginEnd="8dp"
-                    android:hint="operation output"
+                    android:hint="Report Diagnostico Tag / Log"
                     app:boxCornerRadiusBottomEnd="5dp"
                     app:boxCornerRadiusBottomStart="5dp"
                     app:boxCornerRadiusTopEnd="5dp"
-                    app:boxCornerRadiusTopStart="5dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
+                    app:boxCornerRadiusTopStart="5dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etOutput"
@@ -120,17 +119,10 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:focusable="false"
-                        android:text="choose an operation ..."
+                        android:text="Avvicina un tag NTAG 424 DNA per avviare la diagnostica..."
                         android:typeface="monospace"
                         tools:ignore="KeyboardInaccessibleWidget" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    app:dividerInsetEnd="8dp"
-                    app:dividerInsetStart="8dp" />
 
             </LinearLayout>
 

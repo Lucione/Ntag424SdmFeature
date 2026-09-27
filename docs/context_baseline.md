@@ -23,6 +23,9 @@ Ntag424_ORG/
 │           ├── de/androidcrypto/ntag424sdmfeature/   # Layer UI & Workflow Application
 │           └── net/bplearning/ntag424/              # Layer Core Protocol, Crypto & Commands
 ├── server/                                         # Backend Server PHP/MySQL (SUN Verification Engine)
+│   ├── scripts/
+│   │   └── upsert_tag.sql                          # MySQL Stored Procedure e Query UPSERT
+│   └── src/                                        # SunVerifier, Cmac, Diversify, TagRepository
 └── docs/                                           # Datasheet NXP, specifiche ISO/IEC e documentazione
 ```
 
@@ -351,11 +354,13 @@ server/
 ├── config.php            # Configurazione chiavi AES e parametri DB
 ├── schema.sql            # Struttura delle tabelle MySQL (`tags` e `scan_log`)
 ├── verify.php            # REST Endpoint invocato dal browser dello smartphone
+├── scripts/
+│   └── upsert_tag.sql    # Stored Procedure & SQL UPSERT per gestione ciclo di vita tag
 └── src/
     ├── Cmac.php          # Implementazione AES-128-CMAC (RFC 4493 / NIST SP800-38B)
     ├── Diversify.php     # Algoritmo di diversificazione chiavi NXP AN10922
     ├── SunVerifier.php   # Core Engine per la decifratura PICCData e verifica CMAC
-    └── TagRepository.php # Persistenza MySQL e controllo anti-replay avanzato
+    └── TagRepository.php # Persistenza MySQL, UPSERT e controllo anti-replay avanzato
 ```
 
 ### 7.2 Flusso di Verifica End-to-End e Matrice di Compatibilità Crittografica
@@ -394,3 +399,94 @@ Per garantire il corretto funzionamento del sistema end-to-end, i parametri nel 
 - **`file_read_master_key`**: Deve corrispondere alla Master Key usata per la diversificazione dell'app mobile (`MASTER_APPLICATION_KEY_FOR_DIVERSIFYING = A9000000000000000000000000000000`).
 - **`application_id`**: Deve corrispondere all'Application ID usato dall'app mobile (`3042F5`).
 - **`system_identifier`**: Deve corrispondere al System Identifier usato dall'app mobile (`666F6F` / `"foo"`).
+
+---
+
+## 8. Workflow di Programmazione Reversibile (UID + Encrypted PICC + CMAC) e Sicurezza contro il Blocco Permanente
+
+### 8.1 Procedura di Programmazione Passo-Passo (Interfaccia Utente Mobile App)
+
+Per programmare un tag NTAG 424 DNA in modo che generi l'URL dinamico contenente l'UID in chiaro, il `PICCData` cifrato e il `CMAC`, mantenendo il tag **pienamente riprogrammabile e resettabile** in qualsiasi momento:
+
+1. **Fase 1: Preparazione Iniziale (`Prepare Tag`)**
+   - Dalla dashboard principale dell'app Android (`MainActivity`), avvia la funzione **`Prepare Tag`** (`PrepareActivity`).
+   - Sfiora il tag NTAG 424 DNA. L'app scriverà il Capability Container di default (File 01) con permessi aperti (`readPerm = ACCESS_EVERYONE`) e scriverà l'URL NDEF iniziale nel File 02.
+   
+2. **Fase 2: Configurazione Encrypted SUN (`Encrypted SUN`)**
+   - Torna alla schermata principale e seleziona **`Encrypted SUN`** (`EncryptedSunActivity`).
+   - Seleziona il Radio Button **`UID and Counter`** (garantisce che l'UID e il ReadCounter siano presenti nel blocco `{PICC}`).
+   - Assicurati che l'URL contenga la struttura completa: `https://logicarts.altervista.org/verify.php?uid={UID}&picc_data={PICC}&cmac={MAC}`
+   - Sfiora il tag e mantienilo a contatto finché l'app non restituisce l'esito `File 02h Change File Settings SUCCESS` e `== FINISHED ==`.
+
+3. **Fase 3: Riprogrammazione o Ripristino delle Condizioni di Fabbrica (`Unset Tag`)**
+   - **Per Riprogrammare il Tag:** È sufficiente repetir la Fase 2 inserendo la nuova URL o le nuove impostazioni.
+   - **Per Resettare il Tag a Fabbrica:** Dalla dashboard seleziona la funzione **`Unset Tag`** (`UnsetActivity`) e sfiora il tag. L'app si autentica con la Master Key (Key 0), azzera il File 02, ripristina i permessi di lettura/scrittura aperti (`readWritePerm = ACCESS_EVERYONE`), disabilita l'SDM (`sdmEnabled = false`) e ripristina le chiavi di fabbrica (`0x00 * 16`).
+
+### 8.2 Analisi Tecnica delle Impostazioni di Protezione (Inversione e Protezione dal Brick)
+
+Nel codice di **[EncryptedSunActivity.java](file:///D:/Sviluppo/Android/Ntag424_ORG/app/src/main/java/de/androidcrypto/ntag424sdmfeature/EncryptedSunActivity.java#L318-L321)**:
+
+```java
+fileSettings02.sdmSettings = sdmSettings;
+fileSettings02.readWritePerm = ACCESS_KEY2;
+fileSettings02.changePerm = ACCESS_KEY0; // <--- Mantiene il controllo tramite Key 0 (Master Key)
+fileSettings02.readPerm = ACCESS_KEY2;
+fileSettings02.writePerm = ACCESS_KEY2;
+```
+
+- **Invarianza dei Diritti di Modifica (`changePerm = ACCESS_KEY0`)**: Il diritto di cambiare le impostazioni del file (Change Access Rights) viene assegnato alla **Key 0 (Master Application Key)** anziché essere disabilitato (`ACCESS_NONE = 0x0F`). Questo consente in qualsiasi momento futuro di autenticarsi con la Key 0 per modificare i permessi o disabilitare l'SDM.
+- **Invarianza del Capability Container (File 01)**: L'app non scrive mai il valore `0xFF` di blocco permanente in lettura nel File 01, garantendo che l'NDEF container rimanga sempre sovrascrivibile.
+
+---
+
+## 9. Miglioramenti dell'Interfaccia Utente (UI/UX) ed Esplicitazione dei Parametri di I/O
+
+### 9.1 Ristrutturazione dell'UI per Utenti Non Tecnici
+I file di layout dell'applicazione Android (`res/layout/activity_*.xml`) sono stati completamente riscritti ed arricchiti con terminologia in lingua italiana chiara e accessibile anche a utenti non tecnici.
+
+Per ogni schermata ed azione:
+- Viene fornita una **descrizione funzionale di alto livello** dello scopo dell'operazione.
+- Viene esplicitato un box informativo in evidenza che elenca **esattamente quali parametri verranno scritti o quali variabili verranno lette sul chip NTAG 424 DNA** a seguito della conferma dell'operazione da parte dell'utente.
+
+### 9.2 Matrice Esplicita Parametri di I/O per Attività
+
+| Activity / Azione UI | Descrizione Utente Non Tecnico | Parametri Scritti / Letti sul Tag NFC |
+| :--- | :--- | :--- |
+| **`PrepareActivity`** | Inizializzazione base del tag per messaggi NDEF standard | **SCRITTI**: File 01 CC (`000F20...`), File 02 NDEF URL base, Chiavi Key 3/4 |
+| **`PlaintextSunActivity`** | Configurazione link con seriale e contatore in chiaro | **SCRITTI**: File 02 URL (`?uid={UID}&ctr={COUNTER}&cmac={MAC}`), SDMSettings (Offsets) |
+| **`EncryptedSunActivity`** | Configurazione link con dati cifrati (Massima Privacy) | **SCRITTI**: File 02 URL (`?uid={UID}&picc_data={PICC}&cmac={MAC}`), SDMSettings MetaKey |
+| **`EncryptedFileSunActivity`** | SUN Cifrato con Dati File aggiuntivi | **SCRITTI**: File 02 URL + Dati File (Timestamp+Codice), SDMEncryptFileData=true |
+| **`EncryptedFileSunCustomKeysActivity`** | SUN Cifrato con Chiavi Segrete Personalizzate (Custom) | **SCRITTI**: Sovrascrittura Key 1..4 (Custom A1..A4), File 02 URL Cifrata |
+| **`EncryptedFileSunDiversifiedKeysActivity`** | SUN Cifrato con Chiavi Univoche per Singolo Chip (AN10922) | **SCRITTI**: Key 4 Diversificata (AES-CMAC MasterKey+UID), File 02 URL Cifrata |
+| **`PlaintextReadCounterLimitSunActivity`** | SUN con Limite Massimo di 3 Scansioni | **SCRITTI**: File 02 URL, SDMSettings (`sdmOptionReadCounterLimit=true`, Limit=3) |
+| **`NdefReaderActivity`** | Lettore NDEF e Simula Verifica Server Anti-Clonazione | **LETTI**: NDEF Record URI, Blocco PICCData cifrato (UID+Counter), Firma CMAC (8 byte) |
+| **`TagOverviewActivity`** | Diagnostica Completa e Ispezione Chip NFC | **LETTI**: Serial Hardware (UID 7-byte), Versione Chiavi, Permessi FileSettings 01..03 |
+| **`UnsetActivity`** | Ripristino Completo alle Impostazioni di Fabbrica | **SCRITTI**: File 01 CC Fabbrica, File 02 Azzerato (0x00), Key 1..4 Reset a 0x00*16 |
+
+---
+
+## 10. Gestione del Ciclo di Vita del Tag a Database MySQL (Upsert Script & Repository)
+
+### 10.1 Stored Procedure MySQL ed Esecuzione Diretta (`server/scripts/upsert_tag.sql`)
+Per consentire il provisioning massivo, la registrazione, la revoca e la risincronizzazione dei contatori di lettura dei tag NTAG 424 DNA sul server MySQL, è stato creato lo script dedicato `server/scripts/upsert_tag.sql`.
+
+Lo script include:
+- **`sp_upsert_tag`**: Stored Procedure MySQL per l'inserimento o aggiornamento atomico di un tag (`uid_hex`, `label`, `status`, `last_counter`).
+- **Istruzione `INSERT ... ON DUPLICATE KEY UPDATE`**: Utilizzabile direttamente in query batch per il censimento massivo di lotti di produzione o per l'integrazione con ORM/script PHP.
+
+### 10.2 Integrazione in `TagRepository.php`
+La classe PHP `SunVerify\TagRepository` è stata estesa con il metodo dedicato:
+
+```php
+public function upsertTag(
+    string $uidHex,
+    ?string $label = null,
+    string $status = 'active',
+    int $lastCounter = -1
+): void
+```
+
+Questa funzione permette all'applicazione server di:
+- Registrare o aggiornare dinamicamente l'etichetta (`label`) o lotto di prodotto associato al seriale `uid_hex`.
+- Modificare lo stato di validità del tag (`status = 'active'` oppure `'revoked'`).
+- Risincronizzare il valore di `last_counter` a seguito di un'operazione di reset o riprogrammazione effettuata via mobile app.

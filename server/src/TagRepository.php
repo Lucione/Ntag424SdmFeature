@@ -14,7 +14,7 @@ final class TagRepository
     public function find(string $uidHex): ?array
     {
         $stmt = $this->pdo->prepare('SELECT * FROM tags WHERE uid_hex = :uid');
-        $stmt->execute(['uid' => $uidHex]);
+        $stmt->execute(['uid' => strtolower(trim($uidHex))]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $row === false ? null : $row;
     }
@@ -25,7 +25,38 @@ final class TagRepository
         $stmt = $this->pdo->prepare(
             "INSERT IGNORE INTO tags (uid_hex, label, status, last_counter) VALUES (:uid, :label, 'active', -1)"
         );
-        $stmt->execute(['uid' => $uidHex, 'label' => $label]);
+        $stmt->execute(['uid' => strtolower(trim($uidHex)), 'label' => $label]);
+    }
+
+    /**
+     * Aggiunge o aggiorna (UPSERT) i dati di un tag nel database MySQL.
+     * Permette la gestione del ciclo di vita: aggiornamento etichetta, cambio stato ('active' / 'revoked')
+     * e risincronizzazione dell'ultimo contatore di lettura.
+     */
+    public function upsertTag(
+        string $uidHex,
+        ?string $label = null,
+        string $status = 'active',
+        int $lastCounter = -1
+    ): void {
+        $uidHex = strtolower(trim($uidHex));
+        $sql = "INSERT INTO tags (uid_hex, label, status, last_counter, first_seen_at)
+                VALUES (:uid, :label, :status, :last_counter, NOW())
+                ON DUPLICATE KEY UPDATE
+                    label        = IF(:label_update IS NOT NULL AND :label_update != '', :label_update2, label),
+                    status       = VALUES(status),
+                    last_counter = GREATEST(last_counter, VALUES(last_counter)),
+                    last_seen_at = IF(VALUES(last_counter) >= 0, NOW(), last_seen_at)";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            'uid'           => $uidHex,
+            'label'         => $label,
+            'status'        => $status,
+            'last_counter'  => $lastCounter,
+            'label_update'  => $label,
+            'label_update2' => $label,
+        ]);
     }
 
     /**
@@ -38,9 +69,10 @@ final class TagRepository
      */
     public function checkAndAdvanceCounter(string $uidHex, int $counter): bool
     {
+        $uidHex = strtolower(trim($uidHex));
         $this->pdo->beginTransaction();
         try {
-            $stmt = $this->pdo->prepare('SELECT last_counter FROM tags WHERE uid_hex = :uid');
+            $stmt = $this->pdo->prepare('SELECT last_counter FROM tags WHERE uid_hex = :uid FOR UPDATE');
             $stmt->execute(['uid' => $uidHex]);
             $lastCounter = $stmt->fetchColumn();
 
@@ -80,7 +112,7 @@ final class TagRepository
              VALUES (:uid, :counter, :mac_valid, :outcome, :ip, :ua)'
         );
         $stmt->execute([
-            'uid' => $uidHex,
+            'uid' => strtolower(trim($uidHex)),
             'counter' => $counter,
             'mac_valid' => $macValid ? 1 : 0,
             'outcome' => $outcome,
