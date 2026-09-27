@@ -292,7 +292,7 @@ public class EncryptedSunActivity extends AppCompatActivity implements NfcAdapte
                         sdmSettings.sdmOptionUid = true;
                         sdmSettings.sdmOptionReadCounter = true;
                     }
-                    ndefRecord = master.generateNdefTemplateFromUrlString("https://logicarts.altervista.org/verify.php?picc_data={PICC}&cmac={MAC}", sdmSettings);
+                    ndefRecord = master.generateNdefTemplateFromUrlString("https://logicarts.altervista.org/verify.php?uid={UID}&picc_data={PICC}&cmac={MAC}", sdmSettings);
                     try {
                         WriteData.run(dnaC, NDEF_FILE_NUMBER, ndefRecord, 0);
                     } catch (IOException e) {
