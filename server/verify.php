@@ -30,10 +30,11 @@ function respond(int $httpStatus, string $outcome, array $extra = []): never
 
 $config = require __DIR__ . '/config.php';
 
+$uidHex = $_GET['uid'] ?? '';
 $piccDataHex = $_GET['picc_data'] ?? '';
 $cmacHex = $_GET['cmac'] ?? '';
 
-if ($piccDataHex === '' || $cmacHex === '') {
+if ($uidHex === '' || $piccDataHex === '' || $cmacHex === '') {
     respond(400, 'missing_params');
 }
 

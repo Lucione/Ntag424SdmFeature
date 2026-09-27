@@ -22,6 +22,7 @@ Ntag424_ORG/
 │       └── java/
 │           ├── de/androidcrypto/ntag424sdmfeature/   # Layer UI & Workflow Application
 │           └── net/bplearning/ntag424/              # Layer Core Protocol, Crypto & Commands
+├── server/                                         # Backend Server PHP/MySQL (SUN Verification Engine)
 └── docs/                                           # Datasheet NXP, specifiche ISO/IEC e documentazione
 ```
 
@@ -337,3 +338,59 @@ Valori dei Permessi (`Permissions.java`):
 
 - **[ChangeKey](file:///D:/Sviluppo/Android/Ntag424_ORG/app/src/main/java/net/bplearning/ntag424/command/ChangeKey.java)**
   - `public static void run(DnaCommunicator comm, int keyNum, byte[] oldKey, byte[] newKey, int keyVersion)`: Cambia il valore e la versione di una chiave AES.
+
+---
+
+## 7. Backend Server (PHP / MySQL) e Consistenza End-to-End
+
+### 7.1 Architettura e Moduli Server Side (`server/`)
+La directory `server/` contiene l'infrastruttura completa lato server (sviluppata in PHP 8.1+ e MySQL/MariaDB) per la verifica remota anticontraffazione dei messaggi SUN generati dai tag NTAG 424 DNA.
+
+```
+server/
+├── config.php            # Configurazione chiavi AES e parametri DB
+├── schema.sql            # Struttura delle tabelle MySQL (`tags` e `scan_log`)
+├── verify.php            # REST Endpoint invocato dal browser dello smartphone
+└── src/
+    ├── Cmac.php          # Implementazione AES-128-CMAC (RFC 4493 / NIST SP800-38B)
+    ├── Diversify.php     # Algoritmo di diversificazione chiavi NXP AN10922
+    ├── SunVerifier.php   # Core Engine per la decifratura PICCData e verifica CMAC
+    └── TagRepository.php # Persistenza MySQL e controllo anti-replay avanzato
+```
+
+### 7.2 Flusso di Verifica End-to-End e Matrice di Compatibilità Crittografica
+
+L'algoritmo implementato in `server/src/SunVerifier.php` garantisce una perfetta corrispondenza ed equivalenza crittografica rispetto all'SDK Android (`net.bplearning.ntag424`):
+
+1. **Ricezione ed Estrazione Parametri (`verify.php`)**:
+   L'URL dinamicamente specchiato dal tag durante il tap (es. `https://domain/verify.php?uid={UID}&picc_data={PICC}&cmac={MAC}`) viene ricevuto da `verify.php`.
+   
+2. **Decifratura PICCData (`SunVerifier::decryptPiccData`)**:
+   I 16 byte esadecimali del parametro `picc_data` vengono decifrati con AES-128-CBC (IV nullo = 16 byte `0x00`) tramite la `meta_read_key`.
+   - Estratti: UID reale del tag (7 byte) e Read Counter dinamico (`SDMReadCtr`, 3 byte LSB).
+
+3. **Diversificazione della Chiave (`Diversify::aes128`)**:
+   Se `diversify_file_read_key = true` in `config.php`, viene calcolata la chiave specifica del singolo tag secondo lo standard NXP AN10922:
+   `DiversifiedKey = AES128-CMAC(file_read_master_key, 0x01 || UID || AID || SystemIdentifier)`
+   Questa logica equivale esattamente a `KeySet.generateKeySetFromMasterKey()` presente nell'app Android.
+
+4. **Derivazione Session Key & Validazione CMAC (`SunVerifier::deriveMacSessionKey` & `Cmac.php`)**:
+   - Vettore di sessione: `SV2 = 0x3C 0xC3 0x00 0x01 0x00 0x80 || UID(7 byte) || ReadCounter(3 byte LSB)`
+   - Session Key: `KSesSDMMAC = AES128-CMAC(SDMFileReadKey, SV2)`
+   - Calcolo CMAC: `Cmac::generate(KSesSDMMAC, DynamicData)`
+   - Troncamento a 8 byte (`Cmac::shorten`): estrazione dei byte con indice dispari (indici 1, 3, 5, 7, 9, 11, 13, 15).
+   - Confronto a tempo costante con `hash_equals()` per prevenire attacchi di timing.
+
+5. **Protezione Anti-Replay e Anti-Cloning (`TagRepository::checkAndAdvanceCounter`)**:
+   In una transazione SQL atomica con blocco riga:
+   - Se `ReadCounter <= last_counter` registrato per quel tag, la scansione viene rifiutata con esito `'replay'` o `'replay_suspected'`.
+   - Se `ReadCounter > last_counter`, il valore viene aggiornato a database e l'esito è `'valid'`.
+
+### 7.3 Note di Allineamento e Configurazione Chiavi (App Mobile <-> Server)
+
+Per garantire il corretto funzionamento del sistema end-to-end, i parametri nel file `server/config.php` devono combaciare esattamente con la configurazione impostata dai workflow dell'app Android:
+
+- **`meta_read_key`**: Deve corrispondere alla **Key 2** usata per la configurazione SDM (es. `00000000000000000000000000000000` per tag di fabbrica o `A2000000000000000000000000000000` per Custom Keys).
+- **`file_read_master_key`**: Deve corrispondere alla Master Key usata per la diversificazione dell'app mobile (`MASTER_APPLICATION_KEY_FOR_DIVERSIFYING = A9000000000000000000000000000000`).
+- **`application_id`**: Deve corrispondere all'Application ID usato dall'app mobile (`3042F5`).
+- **`system_identifier`**: Deve corrispondere al System Identifier usato dall'app mobile (`666F6F` / `"foo"`).
