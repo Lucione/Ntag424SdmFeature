@@ -7,14 +7,10 @@ error_reporting(E_ALL);
  * Endpoint chiamato dal browser dello smartphone quando legge il tag NFC.
  * URL attesa: https://tuodominio/verify.php?uid=<hex>&picc_data=<hex>&cmac=<hex>
  *
- * Implementa il pattern PRG (Post/Redirect/Get):
- * 1. Decifra e verifica la firma del tag.
- * 2. Se il tag non esiste a DB, viene registrato con stato 'pending' (NON attivo).
- * 3. Se il tag è 'pending', viene salvata la scansione ('not_activated') e viene mostrata
- *    la pagina informativa. Solo l'abilitazione nel backend permetterà l'esito 'valid'.
- * 4. Registra l'esito nel database (`scan_log`).
- * 5. Reindirizza il browser dell'utente a `result.php?scan_id=...&outcome=...`
- *    evitando che ricaricamenti del browser rieseguano il ciclo di verifica.
+ * Supporta due modalità di risposta:
+ * 1. Default (Browser): Reindirizzamento PRG (HTTP 302) a `result.php` con bollino visuale HTML.
+ * 2. API / Test Mode (`format=json` oppure `json=1` oppure `mode=json` oppure `Accept: application/json`):
+ *    Restituisce un payload JSON dettagliato con diagnostica, descrizione dell'esito e scan_id.
  */
 
 require __DIR__ . '/src/Cmac.php';
@@ -27,10 +23,31 @@ use SunVerify\TagRepository;
 
 $config = require __DIR__ . '/config.php';
 
-// Determina se la richiesta proviene da un'API (es. App Mobile) o dal Browser
+$outcomeDescriptions = [
+    'valid'               => 'Tag NTAG 424 DNA autentico, attivo e firma CMAC verificata con successo.',
+    'not_activated'       => 'Tag NTAG 424 DNA censito ma in stato pending (non ancora attivato nel backend).',
+    'replay_suspected'    => 'Scansione duplicata rilevata (Anti-Replay): contatore di lettura non avanzato.',
+    'mac_invalid'         => 'Firma crittografica CMAC non valida: sospetta clonazione o chiavi non corrispondenti.',
+    'revoked'             => 'Tag registrato ma marcato come revocato/bloccato nel sistema centrale.',
+    'missing_params'      => 'Parametri obbligatori picc_data e/o cmac mancanti nell\'URL.',
+    'bad_format'          => 'Formato dei parametri esadecimali errato o lunghezza invalida.',
+    'db_connection_error' => 'Errore di connessione al database MySQL.',
+    'internal_error'      => 'Errore interno durante il processo di validazione.'
+];
+
+// Determina se la risposta deve essere formattata in JSON anziché reindirizzata
 function isJsonRequested(): bool
 {
     if (isset($_GET['format']) && strtolower($_GET['format']) === 'json') {
+        return true;
+    }
+    if (isset($_GET['json']) && ($_GET['json'] === '1' || strtolower($_GET['json']) === 'true')) {
+        return true;
+    }
+    if (isset($_GET['mode']) && strtolower($_GET['mode']) === 'json') {
+        return true;
+    }
+    if (isset($_GET['debug']) && ($_GET['debug'] === '1' || strtolower($_GET['debug']) === 'true')) {
         return true;
     }
     $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
@@ -39,10 +56,22 @@ function isJsonRequested(): bool
 
 function respond(int $httpStatus, string $outcome, array $extra = [], ?int $scanId = null): never
 {
+    global $outcomeDescriptions;
+
     if (isJsonRequested()) {
         header('Content-Type: application/json; charset=utf-8');
         http_response_code($httpStatus);
-        echo json_encode(array_merge(['outcome' => $outcome], $extra), JSON_UNESCAPED_SLASHES);
+
+        $payload = [
+            'success'     => ($outcome === 'valid'),
+            'outcome'     => $outcome,
+            'description' => $outcomeDescriptions[$outcome] ?? 'Esito validazione elaborato.',
+            'http_code'   => $httpStatus,
+            'scan_id'     => $scanId,
+            'timestamp'   => date('Y-m-d H:i:s'),
+        ];
+
+        echo json_encode(array_merge($payload, $extra), JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         exit;
     }
 
@@ -107,7 +136,7 @@ $uid = $result->uidHex;
 if (!$result->macValid) {
     $repo->register($uid, null, 'pending');
     $scanId = $repo->logScan($uid, $result->readCounter, false, 'mac_invalid');
-    respond(200, 'mac_invalid', ['uid' => $uid], $scanId);
+    respond(200, 'mac_invalid', ['uid' => $uid, 'mac_valid' => false], $scanId);
 }
 
 // 2. Registrazione Tag se mai visto prima (viene inserito in stato 'pending' = NON ATTIVO)
@@ -115,19 +144,19 @@ $existing = $repo->find($uid);
 if ($existing === null) {
     $repo->register($uid, null, 'pending');
     $scanId = $repo->logScan($uid, $result->readCounter, true, 'not_activated');
-    respond(200, 'not_activated', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
+    respond(200, 'not_activated', ['uid' => $uid, 'counter' => $result->readCounter, 'mac_valid' => true], $scanId);
 }
 
 // 3. Controllo Tag Revocato
 if ($existing['status'] === 'revoked') {
     $scanId = $repo->logScan($uid, $result->readCounter, true, 'revoked');
-    respond(200, 'revoked', ['uid' => $uid], $scanId);
+    respond(200, 'revoked', ['uid' => $uid, 'counter' => $result->readCounter, 'mac_valid' => true], $scanId);
 }
 
 // 4. Controllo Tag Non Ancora Attivato (status = 'pending' o diverso da 'active')
 if ($existing['status'] !== 'active') {
     $scanId = $repo->logScan($uid, $result->readCounter, true, 'not_activated');
-    respond(200, 'not_activated', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
+    respond(200, 'not_activated', ['uid' => $uid, 'counter' => $result->readCounter, 'mac_valid' => true], $scanId);
 }
 
 // 5. Se il tag è 'active', procedi con il controllo Anti-Replay ed avanzamento del contatore
@@ -136,9 +165,9 @@ $counterOk = $repo->checkAndAdvanceCounter($uid, $result->readCounter);
 if (!$counterOk) {
     // Scansione duplicata / Replay
     $scanId = $repo->logScan($uid, $result->readCounter, true, 'replay');
-    respond(200, 'replay_suspected', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
+    respond(200, 'replay_suspected', ['uid' => $uid, 'counter' => $result->readCounter, 'mac_valid' => true], $scanId);
 }
 
 // 6. Scansione Valida, Autentica e Attiva
 $scanId = $repo->logScan($uid, $result->readCounter, true, 'valid');
-respond(200, 'valid', ['uid' => $uid, 'counter' => $result->readCounter], $scanId);
+respond(200, 'valid', ['uid' => $uid, 'counter' => $result->readCounter, 'mac_valid' => true], $scanId);

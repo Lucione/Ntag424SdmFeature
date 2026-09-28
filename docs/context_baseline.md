@@ -23,10 +23,14 @@ Ntag424_ORG/
 │           ├── de/androidcrypto/ntag424sdmfeature/   # Layer UI & Workflow Application
 │           └── net/bplearning/ntag424/              # Layer Core Protocol, Crypto & Commands
 ├── server/                                         # Backend Server PHP/MySQL (SUN Verification Engine)
-│   ├── verify.php                                  # Endpoint PRG per l'invocazione da tap NFC
+│   ├── verify.php                                  # Endpoint PRG / JSON per l'invocazione da tap NFC o test
 │   ├── result.php                                  # Pagina HTML con Bollino di Autenticità per il consumatore
 │   ├── scripts/
 │   │   └── upsert_tag.sql                          # Stored Procedure e Query UPSERT
+│   ├── tests/                                      # Suite di Test Automatizzata
+│   │   ├── run_tests.php                           # Test Runner CLI/HTTP in PHP con sintesi NTAG 424
+│   │   ├── run_curl_tests.sh                       # Script Shell / cURL per automazione CI/CD
+│   │   └── test_results.log                        # Log di diagnostica e risultati test
 │   └── src/                                        # SunVerifier, Cmac, Diversify, TagRepository
 └── docs/                                           # Datasheet NXP, specifiche ISO/IEC e documentazione
 ```
@@ -359,6 +363,10 @@ server/
 ├── result.php            # Pagina HTML con Bollino di Autenticità (Stato 'valid', 'not_activated', ecc.)
 ├── scripts/
 │   └── upsert_tag.sql    # Stored Procedure & SQL UPSERT per gestione ciclo di vita tag
+├── tests/                # Suite di Test Automatizzata
+│   ├── run_tests.php     # Test Runner CLI/HTTP in PHP con sintesi NTAG 424
+│   ├── run_curl_tests.sh # Runner Script Shell / cURL per automazione CI/CD
+│   └── test_results.log  # Log di diagnostica e risultati test
 └── src/
     ├── Cmac.php          # Implementazione AES-128-CMAC (RFC 4493 / NIST SP800-38B)
     ├── Diversify.php     # Algoritmo di diversificazione chiavi NXP AN10922
@@ -515,3 +523,55 @@ Per evitare che il ricaricamento automatico della pagina web o il re-focus del b
 | **`replay`** / **`replay_suspected`** | **Bollino Arancione (⚠)** | **Attenzione: Scansione Duplicata**: URL NFC già utilizzata in precedenza (Anti-Replay). Previene il riuso delle URL. |
 | **`mac_invalid`** | **Bollino Rosso (✕)** | **Prodotto Non Autentico**: Firma crittografica non valida o chip clonato. |
 | **`revoked`** | **Bollino Rosso (⛔)** | **Tag Revocato o Bloccato**: Il seriale del tag risulta ritirato nel database centrale. |
+
+---
+
+## 12. Suite di Test Automatizzata Backend Server (`server/tests/`)
+
+### 12.1 Architettura e Moduli di Test
+Per consentire il collaudo completo e continuo del server di validazione senza dover programmare fisicamente tag NFC per ogni casistica di test, è stata implementata una suite di test automatizzata in `server/tests/`.
+
+```
+server/tests/
+├── run_tests.php       # Test Runner automatizzato PHP (Sintesi crittografica NTAG 424 DNA)
+├── run_curl_tests.sh   # Runner Script Shell / cURL per esecuzione in pipeline CI/CD
+└── test_results.log    # Report di diagnostica e tracciamento esecuzioni
+```
+
+### 12.2 Generazione Sintetica di Tap NFC e Modalità JSON (`json=1`)
+
+1. **Sintesi Crittografica di Tap NFC in PHP**:
+   Il runner `run_tests.php` include il motore `generateSyntheticTapUrl(...)` che genera in tempo reale URL di tap NTAG 424 DNA crittograficamente autentiche al 100% per qualsiasi UID e contatore:
+   - Cifratura del blocco `PICCData` di 16 byte con AES-128-CBC e `meta_read_key`.
+   - Derivazione della chiave diversificata (AN10922) se abilitata.
+   - Derivazione della Session Key $K_{\text{SesSDMMAC}}$ con vettore $SV2$.
+   - Calcolo e troncamento del codice $CMAC$ a 8 byte.
+2. **Modalità di Risposta JSON per Test API (`json=1` / `format=json`)**:
+   L'endpoint `verify.php` accetta i parametri opzionali `json=1`, `format=json`, `mode=json` o `debug=1`. In presenza di tali flag, restituisce un payload JSON strutturato con diagnostica completa, eliminando il reindirizzamento PRG:
+
+```json
+{
+    "success": true,
+    "outcome": "valid",
+    "description": "Tag NTAG 424 DNA autentico, attivo e firma CMAC verificata con successo.",
+    "http_code": 200,
+    "scan_id": 15,
+    "timestamp": "2024-05-20 14:30:00",
+    "uid": "042140f2291d90",
+    "counter": 2,
+    "mac_valid": true
+}
+```
+
+### 12.3 Matrice dei Test Case Automatizzati
+
+| # | Test Case | Parametri Invocati | Esito Atteso | Diagnostica Verificata |
+| :-: | :--- | :--- | :--- | :--- |
+| **1** | Parametri Mancanti | `verify.php?json=1` | HTTP 400 (`missing_params`) | Rifiuto parametri vuoti |
+| **2** | CMAC Errato / Payload Corrotto | `verify.php?picc_data=0011...&cmac=0011...&json=1` | HTTP 200 (`mac_invalid`) | `mac_valid = false` |
+| **3** | Nuovo Tag Autentico Sintetico | `verify.php?uid=04A1...&picc_data=...&cmac=...&json=1` | HTTP 200 (`not_activated`) | Tag censito come `pending` |
+| **4** | Attivazione Tag Backend | `TagRepository::upsertTag($uid, 'Label', 'active')` | DB `status = 'active'` | Tag abilitato nel DB |
+| **5** | Tag Attivo con Contatore N | `verify.php` (Counter 2) | HTTP 200 (`valid`) | `success = true`, `counter = 2` |
+| **6** | Anti-Replay (Stesso Contatore) | `verify.php` (Counter 2 rieseguito) | HTTP 200 (`replay_suspected`) | Rilevamento duplicato |
+| **7** | Anti-Replay (Contatore Minore) | `verify.php` (Counter 1 su tag a 2) | HTTP 200 (`replay_suspected`) | Rifiuto contatore arretrato |
+| **8** | Revoca Tag | `TagRepository::upsertTag($uid, null, 'revoked')` + Tap (Counter 3) | HTTP 200 (`revoked`) | Blocco tag revocato |
