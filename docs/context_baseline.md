@@ -29,7 +29,9 @@ Ntag424_ORG/
 │   │   └── upsert_tag.sql                          # Stored Procedure e Query UPSERT
 │   ├── tests/                                      # Suite di Test Automatizzata
 │   │   ├── run_tests.php                           # Test Runner CLI/HTTP in PHP con sintesi NTAG 424
-│   │   ├── run_curl_tests.sh                       # Script Shell / cURL per automazione CI/CD
+│   │   ├── run_curl_tests.ps1                      # Runner cURL / PowerShell nativo Windows (Senza PHP)
+│   │   ├── run_curl_tests.bat                      # Runner Batch Windows per cURL
+│   │   ├── run_curl_tests.sh                       # Script Shell / cURL per Linux CI/CD
 │   │   └── test_results.log                        # Log di diagnostica e risultati test
 │   └── src/                                        # SunVerifier, Cmac, Diversify, TagRepository
 └── docs/                                           # Datasheet NXP, specifiche ISO/IEC e documentazione
@@ -364,8 +366,9 @@ server/
 ├── scripts/
 │   └── upsert_tag.sql    # Stored Procedure & SQL UPSERT per gestione ciclo di vita tag
 ├── tests/                # Suite di Test Automatizzata
-│   ├── run_tests.php     # Test Runner CLI/HTTP in PHP con sintesi NTAG 424
-│   ├── run_curl_tests.sh # Runner Script Shell / cURL per automazione CI/CD
+│   ├── run_curl_tests.ps1 # Runner cURL / PowerShell nativo Windows (Senza dipendenza PHP)
+│   ├── run_curl_tests.bat # Runner Batch Windows per cURL
+│   ├── run_curl_tests.sh # Runner Script Shell / cURL per Linux CI/CD
 │   └── test_results.log  # Log di diagnostica e risultati test
 └── src/
     ├── Cmac.php          # Implementazione AES-128-CMAC (RFC 4493 / NIST SP800-38B)
@@ -528,50 +531,37 @@ Per evitare che il ricaricamento automatico della pagina web o il re-focus del b
 
 ## 12. Suite di Test Automatizzata Backend Server (`server/tests/`)
 
-### 12.1 Architettura e Moduli di Test
-Per consentire il collaudo completo e continuo del server di validazione senza dover programmare fisicamente tag NFC per ogni casistica di test, è stata implementata una suite di test automatizzata in `server/tests/`.
+### 12.1 Architettura e Moduli di Test Nativi Windows / cURL
+Per consentire il collaudo remoto del server da un PC Windows senza dipendere dall'installazione locale di PHP, la suite è basata su **PowerShell nativo e cURL**:
 
 ```
 server/tests/
-├── run_tests.php       # Test Runner automatizzato PHP (Sintesi crittografica NTAG 424 DNA)
-├── run_curl_tests.sh   # Runner Script Shell / cURL per esecuzione in pipeline CI/CD
+├── run_curl_tests.ps1  # Runner cURL / PowerShell nativo Windows (Senza dipendenza da PHP)
+├── run_curl_tests.bat  # Launcher Batch Windows (Doppio click o CMD)
+├── run_tests.php       # Runner facoltativo CLI in PHP con sintesi crittografica NTAG 424
+├── run_curl_tests.sh   # Runner Script Shell / cURL per Linux CI/CD
 └── test_results.log    # Report di diagnostica e tracciamento esecuzioni
 ```
 
-### 12.2 Generazione Sintetica di Tap NFC e Modalità JSON (`json=1`)
+### 12.2 Esecuzione cURL Nativa su Windows (`json=1`)
 
-1. **Sintesi Crittografica di Tap NFC in PHP**:
-   Il runner `run_tests.php` include il motore `generateSyntheticTapUrl(...)` che genera in tempo reale URL di tap NTAG 424 DNA crittograficamente autentiche al 100% per qualsiasi UID e contatore:
-   - Cifratura del blocco `PICCData` di 16 byte con AES-128-CBC e `meta_read_key`.
-   - Derivazione della chiave diversificata (AN10922) se abilitata.
-   - Derivazione della Session Key $K_{\text{SesSDMMAC}}$ con vettore $SV2$.
-   - Calcolo e troncamento del codice $CMAC$ a 8 byte.
-2. **Modalità di Risposta JSON per Test API (`json=1` / `format=json`)**:
-   L'endpoint `verify.php` accetta i parametri opzionali `json=1`, `format=json`, `mode=json` o `debug=1`. In presenza di tali flag, restituisce un payload JSON strutturato con diagnostica completa, eliminando il reindirizzamento PRG:
+L'endpoint `verify.php` accetta i parametri opzionali `json=1`, `format=json` o `Accept: application/json`. In presenza di tali flag, restituisce un payload JSON strutturato con diagnostica completa, eliminando il reindirizzamento PRG.
 
-```json
-{
-    "success": true,
-    "outcome": "valid",
-    "description": "Tag NTAG 424 DNA autentico, attivo e firma CMAC verificata con successo.",
-    "http_code": 200,
-    "scan_id": 15,
-    "timestamp": "2024-05-20 14:30:00",
-    "uid": "042140f2291d90",
-    "counter": 2,
-    "mac_valid": true
-}
+Invocazione remota da Windows PowerShell / Command Prompt senza PHP:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\server\tests\run_curl_tests.ps1 -TargetUrl "https://logicarts.altervista.org/verify.php"
 ```
 
-### 12.3 Matrice dei Test Case Automatizzati
+Invocazione remota da Batch (`cmd.exe`):
+```cmd
+.\server\tests\run_curl_tests.bat https://logicarts.altervista.org/verify.php
+```
 
-| # | Test Case | Parametri Invocati | Esito Atteso | Diagnostica Verificata |
+### 12.3 Matrice dei Test Case cURL / REST Automatizzati
+
+| # | Test Case | Invocazione cURL / REST | Esito Atteso | Diagnostica Verificata |
 | :-: | :--- | :--- | :--- | :--- |
-| **1** | Parametri Mancanti | `verify.php?json=1` | HTTP 400 (`missing_params`) | Rifiuto parametri vuoti |
-| **2** | CMAC Errato / Payload Corrotto | `verify.php?picc_data=0011...&cmac=0011...&json=1` | HTTP 200 (`mac_invalid`) | `mac_valid = false` |
-| **3** | Nuovo Tag Autentico Sintetico | `verify.php?uid=04A1...&picc_data=...&cmac=...&json=1` | HTTP 200 (`not_activated`) | Tag censito come `pending` |
-| **4** | Attivazione Tag Backend | `TagRepository::upsertTag($uid, 'Label', 'active')` | DB `status = 'active'` | Tag abilitato nel DB |
-| **5** | Tag Attivo con Contatore N | `verify.php` (Counter 2) | HTTP 200 (`valid`) | `success = true`, `counter = 2` |
-| **6** | Anti-Replay (Stesso Contatore) | `verify.php` (Counter 2 rieseguito) | HTTP 200 (`replay_suspected`) | Rilevamento duplicato |
-| **7** | Anti-Replay (Contatore Minore) | `verify.php` (Counter 1 su tag a 2) | HTTP 200 (`replay_suspected`) | Rifiuto contatore arretrato |
-| **8** | Revoca Tag | `TagRepository::upsertTag($uid, null, 'revoked')` + Tap (Counter 3) | HTTP 200 (`revoked`) | Blocco tag revocato |
+| **1** | Parametri Mancanti | `curl -s "verify.php?json=1"` | HTTP 400 (`missing_params`) | Rifiuto parametri vuoti |
+| **2** | CMAC Errato / Payload Corrotto | `curl -s "verify.php?picc_data=0011...&cmac=0011...&json=1"` | HTTP 200 (`mac_invalid`) | `mac_valid = false` |
+| **3** | Richiesta cURL Nativa Windows | `curl.exe -s "verify.php?picc_data=...&cmac=...&json=1"` | HTTP 200 JSON | Compatibilità cURL CLI Windows |
+| **4** | Struttura JSON API | `Invoke-RestMethod` con header `Accept: application/json` | JSON Valido | Campi `outcome`, `description`, `http_code` |

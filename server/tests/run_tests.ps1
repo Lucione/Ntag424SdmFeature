@@ -15,10 +15,10 @@ param (
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-Write-Host "==========================================================================" -ForegroundColor Cipher
+Write-Host "==========================================================================" -ForegroundColor DarkGray
 Write-Host "SUITE DI TEST AUTOMATIZZATA SERVER BACKEND (WINDOWS POWERSHELL)" -ForegroundColor Cyan
 Write-Host "Target URL: $TargetUrl" -ForegroundColor Yellow
-Write-Host "==========================================================================" -ForegroundColor Cipher
+Write-Host "==========================================================================" -ForegroundColor DarkGray
 
 # Verifica se PHP CLI è disponibile su Windows
 $phpPath = Get-Command "php" -ErrorAction SilentlyContinue
@@ -68,6 +68,6 @@ if ($null -ne $phpPath) {
     Write-Host "--------------------------------------------------------------------------" -ForegroundColor Cyan
 }
 
-Write-Host "`n==========================================================================" -ForegroundColor Cipher
+Write-Host "`n==========================================================================" -ForegroundColor DarkGray
 Write-Host "ESECUZIONE TEST COMPLETATA." -ForegroundColor Cyan
-Write-Host "==========================================================================" -ForegroundColor Cipher
+Write-Host "==========================================================================" -ForegroundColor DarkGray
