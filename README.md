@@ -64,6 +64,11 @@ server/
 ├── verify.php            # HTTP REST Endpoint called on tag tap
 ├── scripts/
 │   └── upsert_tag.sql    # MySQL Stored Procedure & UPSERT queries for tag lifecycle management
+├── tests/
+│   ├── run_tests.php     # PHP Test Runner (supports Pure Remote Mode / Windows)
+│   ├── run_tests.ps1     # Native Windows PowerShell Test Runner
+│   ├── run_tests.bat     # Windows Batch Runner
+│   └── run_curl_tests.sh # Linux/cURL Test Runner
 └── src/
     ├── Cmac.php          # AES-128 CMAC (NIST SP800-38B) & 8-byte Shortened CMAC
     ├── Diversify.php     # NXP AN10922 Key Diversification (AES-128-CMAC)
@@ -93,6 +98,19 @@ server/
    For active tags, `TagRepository::checkAndAdvanceCounter` checks that `ReadCounter > last_counter` in a database transaction.
 7. **PRG Pattern & Visual HTML Response:**  
    `verify.php` redirects to `result.php?scan_id=...&outcome=...` showing a visual authenticity badge (`valid`, `not_activated`, `replay_suspected`, `mac_invalid`, `revoked`).
+
+### Running Server Tests Remotely on Windows
+To run the automated test suite remotely from a Windows PC against a live server:
+```cmd
+# Windows CMD / Batch:
+.\server\tests\run_tests.bat https://logicarts.altervista.org/verify.php
+
+# Windows PowerShell:
+.\server\tests\run_tests.ps1 -TargetUrl "https://logicarts.altervista.org/verify.php"
+
+# PHP CLI on Windows:
+php server/tests/run_tests.php --url=https://logicarts.altervista.org/verify.php
+```
 
 ---
 
