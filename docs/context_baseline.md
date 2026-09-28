@@ -538,8 +538,6 @@ Per consentire il collaudo remoto del server da un PC Windows senza dipendere da
 server/tests/
 ├── run_curl_tests.ps1  # Runner cURL / PowerShell nativo Windows (Senza dipendenza da PHP)
 ├── run_curl_tests.bat  # Launcher Batch Windows (Doppio click o CMD)
-├── run_tests.php       # Runner facoltativo CLI in PHP con sintesi crittografica NTAG 424
-├── run_curl_tests.sh   # Runner Script Shell / cURL per Linux CI/CD
 └── test_results.log    # Report di diagnostica e tracciamento esecuzioni
 ```
 
